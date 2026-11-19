@@ -1,6 +1,6 @@
 {
-  "name": "Half Press",
-  "short_name": "Half Press",
+  "name": "HalfPress",
+  "short_name": "HalfPress",
   "description": "Settings, framing and exposure help for the camera gear you own.",
   "start_url": "./",
   "scope": "./",
