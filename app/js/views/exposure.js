@@ -105,7 +105,8 @@ export const exposureView = {
 
       const blur = Math.max(0, 9 * (1 - Math.log2(f / 1.4) / Math.log2(16 / 1.4)));
       $("#exBg", root).style.filter = `blur(${blur.toFixed(1)}px)`;
-      const spread = t >= 1 / 250 ? Math.min(38, 6 * Math.log2(t * 500)) : 0;
+      // Motion trails start below 1/250, the speed the label calls freezing walking pace.
+      const spread = t > 1 / 250 + 1e-9 ? Math.min(38, 6 * Math.log2(t * 250)) : 0;
       let ghosts = "";
       for (let k = 5; k >= 1 && spread > 0; k--) {
         ghosts += `<use href="#dogShape" transform="translate(${(160 - k * spread).toFixed(1)} 174)" opacity="${(0.34 - k * 0.055).toFixed(2)}"/>`;
