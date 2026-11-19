@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "example-x-50",
+  "type": "lens",
+  "maker": "Example",
+  "model": "X 50mm",
+  "mount": "example-x",
+  "coverage": "full-frame",
+  "focalMm": { "min": 50, "max": 50 },
+  "maxAperture": [{ "atMm": 50, "f": 1.8 }],
+  "minAperture": 22,
+  "stabilization": { "present": false },
+  "autofocus": "stm",
+  "filterThreadMm": 43,
+  "source": { "url": "https://example.com/specs", "retrieved": "2026-11-18", "status": "draft" }
+}

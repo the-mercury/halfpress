@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "generic-nd1000-55",
+  "type": "filter",
+  "maker": "Generic",
+  "model": "ND1000 55mm",
+  "kind": "nd",
+  "ndFactor": 1000,
+  "sizeMm": 55,
+  "attach": "magnetic",
+  "source": { "url": "https://example.com/specs", "retrieved": "2026-11-18", "status": "draft" }
+}

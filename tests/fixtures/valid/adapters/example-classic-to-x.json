@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "example-classic-to-x",
+  "type": "adapter",
+  "maker": "Example",
+  "model": "Classic to X adapter",
+  "kind": "mount-adapter",
+  "from": "example-classic",
+  "to": "example-x",
+  "passesAutofocus": true,
+  "passesStabilization": true,
+  "source": { "url": "https://example.com/specs", "retrieved": "2026-11-18", "status": "draft" }
+}
