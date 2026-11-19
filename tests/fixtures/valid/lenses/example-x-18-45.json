@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "example-x-18-45",
+  "type": "lens",
+  "maker": "Example",
+  "model": "X 18-45mm",
+  "mount": "example-x",
+  "coverage": "aps-c",
+  "focalMm": { "min": 18, "max": 45 },
+  "maxAperture": [{ "atMm": 18, "f": 4.5 }, { "atMm": 45, "f": 6.3 }],
+  "minAperture": 22,
+  "stabilization": { "present": true, "stops": 4 },
+  "autofocus": "stm",
+  "filterThreadMm": 49,
+  "minFocusM": 0.15,
+  "weightG": 130,
+  "source": { "url": "https://example.com/specs", "retrieved": "2026-11-18", "status": "draft" }
+}

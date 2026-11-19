@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "example-classic",
+  "type": "mount",
+  "name": "Example Classic",
+  "maker": "Example",
+  "flangeMm": 44,
+  "formats": ["full-frame", "aps-c"],
+  "source": { "url": "https://example.com/specs", "retrieved": "2026-11-18", "status": "draft" }
+}

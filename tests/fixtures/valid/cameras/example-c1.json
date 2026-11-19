@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "example-c1",
+  "type": "camera",
+  "maker": "Example",
+  "model": "C1",
+  "mount": "example-x",
+  "sensor": { "format": "aps-c", "widthMm": 22.3, "heightMm": 14.9, "megapixels": 24 },
+  "cropFactor": 1.6,
+  "stabilization": { "present": false },
+  "shutter": { "mechanicalFastest": "1/4000", "electronicFastest": "1/8000", "longestTimed": "30", "bulb": true },
+  "iso": { "min": 100, "max": 32000, "expandedMax": 51200 },
+  "battery": "EX-1",
+  "weightG": 375,
+  "source": { "url": "https://example.com/specs", "retrieved": "2026-11-18", "status": "draft" }
+}

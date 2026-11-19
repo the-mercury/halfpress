@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:halfpress:schema:lens",
+  "title": "Lens",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "id", "type", "maker", "model", "mount", "coverage",
+    "focalMm", "maxAperture", "stabilization", "autofocus", "source"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "urn:halfpress:schema:common#/$defs/id" },
+    "type": { "const": "lens" },
+    "maker": { "$ref": "urn:halfpress:schema:common#/$defs/name" },
+    "model": { "$ref": "urn:halfpress:schema:common#/$defs/name" },
+    "mount": {
+      "description": "Id of an entry in catalog/mounts.",
+      "$ref": "urn:halfpress:schema:common#/$defs/id"
+    },
+    "coverage": {
+      "description": "Largest sensor format the lens is designed to cover.",
+      "$ref": "urn:halfpress:schema:camera#/$defs/format"
+    },
+    "focalMm": {
+      "description": "Focal range in millimetres. A prime has min equal to max.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "$ref": "urn:halfpress:schema:common#/$defs/positiveNumber" },
+        "max": { "$ref": "urn:halfpress:schema:common#/$defs/positiveNumber" }
+      }
+    },
+    "maxAperture": {
+      "description": "Widest aperture at given focal lengths, wide end first. A prime has one entry.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["atMm", "f"],
+        "properties": {
+          "atMm": { "$ref": "urn:halfpress:schema:common#/$defs/positiveNumber" },
+          "f": { "$ref": "urn:halfpress:schema:common#/$defs/fNumber" }
+        }
+      }
+    },
+    "minAperture": { "$ref": "urn:halfpress:schema:common#/$defs/fNumber" },
+    "stabilization": {
+      "description": "Optical image stabilization in the lens.",
+      "$ref": "urn:halfpress:schema:common#/$defs/stabilization"
+    },
+    "autofocus": {
+      "description": "Focus motor type, or manual for manual-focus lenses.",
+      "enum": ["stm", "usm", "nano-usm", "vcm", "linear", "other", "manual"]
+    },
+    "filterThreadMm": {
+      "description": "Front filter thread in millimetres, or null when the lens takes no screw-in filter.",
+      "oneOf": [
+        { "$ref": "urn:halfpress:schema:common#/$defs/positiveNumber" },
+        { "type": "null" }
+      ]
+    },
+    "minFocusM": { "$ref": "urn:halfpress:schema:common#/$defs/positiveNumber" },
+    "maxMagnification": { "$ref": "urn:halfpress:schema:common#/$defs/positiveNumber" },
+    "weightG": { "$ref": "urn:halfpress:schema:common#/$defs/positiveNumber" },
+    "source": { "$ref": "urn:halfpress:schema:common#/$defs/source" }
+  }
+}
