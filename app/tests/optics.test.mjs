@@ -45,6 +45,9 @@ test("shutter text round trip", () => {
   assert.equal(parseShutter("30"), 30);
   assert.equal(formatShutter(1 / 250), "1/250");
   assert.equal(formatShutter(2), "2 s");
+  assert.equal(formatShutter(1 / 2), "1/2");
+  assert.equal(formatShutter(0.8), "0.8 s");
+  assert.equal(formatShutter(1), "1 s");
   assert.equal(formatShutter(90), "1 min 30 s");
   assert.equal(formatShutter(1000 / 30), "33 s");
 });

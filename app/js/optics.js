@@ -62,11 +62,14 @@ export function formatShutter(seconds) {
     const s = Math.round(seconds - m * 60);
     return s ? `${m} min ${s} s` : `${m} min`;
   }
-  if (seconds >= 0.3 - EPS) {
+  if (seconds >= 1 - EPS) {
     const rounded = seconds >= 10 ? Math.round(seconds) : Math.round(seconds * 10) / 10;
     return `${rounded} s`;
   }
-  return `1/${Math.round(1 / seconds)}`;
+  // Under a second, cameras show whole fractions (1/2, 1/4) and the rest as tenths (0.8 s).
+  const inverse = 1 / seconds;
+  if (Math.abs(inverse - Math.round(inverse)) < 0.02) return `1/${Math.round(inverse)}`;
+  return `${Math.round(seconds * 10) / 10} s`;
 }
 
 /** The standard shutter speed closest to the given seconds that is not slower. */
