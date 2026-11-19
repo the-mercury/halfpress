@@ -3,9 +3,10 @@
 import { loadCatalog } from "./catalog.js";
 import { $, $$, esc, icon, store } from "./dom.js";
 import { resolveKit } from "./kit.js";
+import { lensView } from "./views/lens.js";
 import { scenesView } from "./views/scenes.js";
 
-const VIEWS = [scenesView];
+const VIEWS = [scenesView, lensView];
 
 function buildShell(context) {
   const main = $("#views");
