@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "canon-rf-s-18-45-f4.5-6.3-is-stm",
+  "type": "lens",
+  "maker": "Canon",
+  "model": "RF-S18-45mm F4.5-6.3 IS STM",
+  "mount": "canon-rf",
+  "coverage": "aps-c",
+  "focalMm": { "min": 18, "max": 45 },
+  "maxAperture": [{ "atMm": 18, "f": 4.5 }, { "atMm": 45, "f": 6.3 }],
+  "minAperture": 22,
+  "stabilization": { "present": true, "stops": 4 },
+  "autofocus": "stm",
+  "filterThreadMm": 49,
+  "minFocusM": 0.2,
+  "maxMagnification": 0.16,
+  "weightG": 130,
+  "source": {
+    "url": "https://sg.canon/en/consumer/rf-s18-45mm-f-4-5-6-3-is-stm/specification",
+    "retrieved": "2026-11-18",
+    "status": "sourced",
+    "notes": "Minimum aperture 22-32 across the zoom. Closest focus and magnification are the AF values; in MF they are 0.15 m and 0.26x. IS up to 6.5 stops with Coordinated Control IS on compatible bodies."
+  }
+}
