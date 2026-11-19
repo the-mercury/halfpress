@@ -140,3 +140,6 @@ svg.ico { fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin:
 
 .error { border: 1px solid var(--warn); border-radius: 14px; padding: 14px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* An odd last tile spans the row instead of sitting alone. */
+.tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
