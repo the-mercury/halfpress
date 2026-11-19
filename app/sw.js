@@ -2,7 +2,7 @@
 // background, so a new catalog or app version shows up on the next open.
 // Bump CACHE when the list of files below changes.
 
-const CACHE = "halfpress-v1";
+const CACHE = "halfpress-v2";
 const CORE = [
   "./",
   "./index.html",
