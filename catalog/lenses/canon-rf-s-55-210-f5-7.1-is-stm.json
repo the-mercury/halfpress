@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "canon-rf-s-55-210-f5-7.1-is-stm",
+  "type": "lens",
+  "maker": "Canon",
+  "model": "RF-S55-210mm F5-7.1 IS STM",
+  "mount": "canon-rf",
+  "coverage": "aps-c",
+  "focalMm": { "min": 55, "max": 210 },
+  "maxAperture": [{ "atMm": 55, "f": 5 }, { "atMm": 210, "f": 7.1 }],
+  "minAperture": 22,
+  "stabilization": { "present": true, "stops": 4.5 },
+  "autofocus": "stm",
+  "filterThreadMm": 55,
+  "minFocusM": 0.73,
+  "maxMagnification": 0.28,
+  "weightG": 270,
+  "source": {
+    "url": "https://in.canon/en/consumer/rf-s55-210mm-f-5-7-1-is-stm/specification",
+    "retrieved": "2026-11-18",
+    "status": "sourced",
+    "notes": "Minimum aperture 22-32 across the zoom. Closest focus 0.73 m at 210 mm and 1.0 m at 55 mm. IS up to 7 stops with Coordinated Control IS on compatible bodies."
+  }
+}

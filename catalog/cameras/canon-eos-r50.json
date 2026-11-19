@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "canon-eos-r50",
+  "type": "camera",
+  "maker": "Canon",
+  "model": "EOS R50",
+  "mount": "canon-rf",
+  "sensor": { "format": "aps-c", "widthMm": 22.3, "heightMm": 14.9, "megapixels": 24.2 },
+  "cropFactor": 1.6,
+  "stabilization": { "present": false },
+  "shutter": {
+    "mechanicalFastest": "1/4000",
+    "electronicFastest": "1/8000",
+    "longestTimed": "30",
+    "bulb": true
+  },
+  "iso": { "min": 100, "max": 32000, "expandedMax": 51200 },
+  "battery": "LP-E17",
+  "weightG": 375,
+  "source": {
+    "url": "https://canon-europe.com/cameras/eos-r50/specifications",
+    "retrieved": "2026-11-18",
+    "status": "sourced",
+    "notes": "Battery, ISO, no in-body IS and weight (375 g black, with battery and card) from https://hk.canon/en/consumer/eos-r50-body/specification."
+  }
+}

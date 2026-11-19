@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "canon-mount-adapter-ef-eos-r",
+  "type": "adapter",
+  "maker": "Canon",
+  "model": "Mount Adapter EF-EOS R",
+  "kind": "mount-adapter",
+  "from": "canon-ef",
+  "to": "canon-rf",
+  "passesAutofocus": true,
+  "passesStabilization": true,
+  "source": {
+    "url": "https://www.canon-europe.com/lenses/eos-r-adapters/mount-adapter-ef-eos-r/index.html",
+    "retrieved": "2026-11-18",
+    "status": "draft",
+    "notes": "Page says it lets EF and EF-S lenses be used on EOS R cameras with the same performance and functionality as on EOS DSLRs; it does not name autofocus or IS explicitly. Weight about 110 g."
+  }
+}

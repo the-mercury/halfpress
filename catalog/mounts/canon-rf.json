@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "canon-rf",
+  "type": "mount",
+  "name": "Canon RF",
+  "maker": "Canon",
+  "formats": ["full-frame", "aps-c"],
+  "source": {
+    "url": "https://canon-europe.com/cameras/eos-r50/specifications",
+    "retrieved": "2026-11-18",
+    "status": "sourced",
+    "notes": "Lens mount listed as RF, natively supporting RF and RF-S lenses. Full-frame coverage of RF lenses per the RF 50mm F1.8 STM spec page (Image Size: Full frame)."
+  }
+}

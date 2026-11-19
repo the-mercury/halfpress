@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "canon-ef",
+  "type": "mount",
+  "name": "Canon EF",
+  "maker": "Canon",
+  "formats": ["full-frame", "aps-c"],
+  "source": {
+    "url": "https://www.canon-europe.com/lenses/eos-r-adapters/mount-adapter-ef-eos-r/index.html",
+    "retrieved": "2026-11-18",
+    "status": "draft",
+    "notes": "Covers EF (full-frame) and EF-S (APS-C) lenses, which the Mount Adapter EF-EOS R accepts. Flange distance not yet sourced."
+  }
+}
