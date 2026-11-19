@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "generic-vnd-58",
+  "type": "filter",
+  "maker": "Generic",
+  "model": "Variable ND 58mm",
+  "kind": "variable-nd",
+  "ndStops": { "min": 1, "max": 9 },
+  "sizeMm": 58,
+  "attach": "screw-in",
+  "source": { "url": "https://example.com/specs", "retrieved": "2026-11-18", "status": "draft" }
+}
