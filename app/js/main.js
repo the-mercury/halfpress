@@ -6,8 +6,9 @@ import { resolveKit } from "./kit.js";
 import { exposureView } from "./views/exposure.js";
 import { lensView } from "./views/lens.js";
 import { scenesView } from "./views/scenes.js";
+import { timerView } from "./views/timer.js";
 
-const VIEWS = [scenesView, lensView, exposureView];
+const VIEWS = [scenesView, lensView, exposureView, timerView];
 
 function buildShell(context) {
   const main = $("#views");
