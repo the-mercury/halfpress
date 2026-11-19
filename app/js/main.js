@@ -3,10 +3,11 @@
 import { loadCatalog } from "./catalog.js";
 import { $, $$, esc, icon, store } from "./dom.js";
 import { resolveKit } from "./kit.js";
+import { exposureView } from "./views/exposure.js";
 import { lensView } from "./views/lens.js";
 import { scenesView } from "./views/scenes.js";
 
-const VIEWS = [scenesView, lensView];
+const VIEWS = [scenesView, lensView, exposureView];
 
 function buildShell(context) {
   const main = $("#views");
