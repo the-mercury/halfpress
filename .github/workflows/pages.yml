@@ -1,8 +1,12 @@
 name: Deploy app
 
+# One Pages site holds both copies: main at the root, dev under /dev/ as a
+# preview to check on a phone before releasing. A push to either branch
+# rebuilds the whole site from the latest of both.
+
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -23,12 +27,29 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev
+
+      - name: Assemble the site
+        run: |
+          cp -r main/app site
+          rm -rf site/tests site/dev
+          cp -r dev/app site/dev
+          rm -rf site/dev/tests
+          sed -i 's/"name": "HalfPress"/"name": "HalfPress Dev"/; s/"short_name": "HalfPress"/"short_name": "HP Dev"/' site/dev/manifest.webmanifest
+          sed -i 's/<title>\([^<]*\)<\/title>/<title>\1 (dev)<\/title>/; s/content="HalfPress"/content="HP Dev"/' site/dev/index.html
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: app
+          path: site
 
       - id: deployment
         uses: actions/deploy-pages@v4
