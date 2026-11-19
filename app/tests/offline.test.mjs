@@ -19,7 +19,7 @@ test("the service worker caches every app file", () => {
   const needed = files(appDir).filter((f) =>
     !f.startsWith("tests/") && f !== "sw.js" && /\.(html|css|js|json|webmanifest|png)$/.test(f));
   const missing = needed.filter((f) => !listed.has(f));
-  assert.deepEqual(missing, [], "add these to CORE in app/sw.js and bump CACHE");
+  assert.deepEqual(missing, [], "add these to CORE in app/sw.js and bump VERSION");
 });
 
 test("the service worker lists no files that don't exist", () => {

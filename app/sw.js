@@ -1,8 +1,14 @@
 // Offline support. App files are served from the cache and refreshed in the
 // background, so a new catalog or app version shows up on the next open.
-// Bump CACHE when the list of files below changes.
+// Bump VERSION when the list of files below changes.
+//
+// The live app and the dev preview (under dev/) share one origin, so each
+// copy names its cache after its own scope and only clears its own old caches.
 
-const CACHE = "halfpress-v3";
+const VERSION = "halfpress-v3";
+const SCOPE = self.registration.scope;
+const CACHE = `${VERSION} ${SCOPE}`;
+const PREVIEW = new URL("dev/", SCOPE).href;
 const CORE = [
   "./",
   "./index.html",
@@ -31,7 +37,9 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(
+        keys.filter((k) => k !== CACHE && (k.endsWith(` ${SCOPE}`) || !k.includes(" "))).map((k) => caches.delete(k)),
+      ))
       .then(() => self.clients.claim()),
   );
 });
@@ -42,6 +50,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   const isFont = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
   if (url.origin !== self.location.origin && !isFont) return;
+  // The live app leaves the dev preview to its own service worker.
+  if (url.href.startsWith(PREVIEW)) return;
 
   event.respondWith(
     caches.open(CACHE).then((cache) =>
