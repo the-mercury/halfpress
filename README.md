@@ -72,4 +72,7 @@ npm test                               # app logic tests (Node 22+)
 
 ## License
 
-To be decided.
+- **Code** (the app, scripts, tests and schemas): [MIT](LICENSE).
+- **Gear catalog data** (`catalog/` entries and `app/data/catalog.json`): [CC BY 4.0](catalog/LICENSE.md). Reuse it freely, with credit to Half Press.
+
+Specifications come from each maker's published spec pages, linked in every entry. Brand and product names belong to their owners.
