@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "step-up-49-55",
+  "type": "adapter",
+  "maker": "Generic",
+  "model": "49-55mm step-up ring",
+  "kind": "step-up-ring",
+  "from": 49,
+  "to": 55,
+  "source": { "url": "https://example.com/specs", "retrieved": "2026-11-18", "status": "draft" }
+}
