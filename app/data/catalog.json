@@ -1,0 +1,303 @@
+{
+  "schemaVersion": 1,
+  "version": "c15969f7a376",
+  "counts": {
+    "mounts": 2,
+    "cameras": 1,
+    "lenses": 3,
+    "filters": 4,
+    "adapters": 2
+  },
+  "mounts": [
+    {
+      "schemaVersion": 1,
+      "id": "canon-ef",
+      "type": "mount",
+      "name": "Canon EF",
+      "maker": "Canon",
+      "formats": [
+        "full-frame",
+        "aps-c"
+      ],
+      "source": {
+        "url": "https://www.canon-europe.com/lenses/eos-r-adapters/mount-adapter-ef-eos-r/index.html",
+        "retrieved": "2026-11-18",
+        "status": "draft",
+        "notes": "Covers EF (full-frame) and EF-S (APS-C) lenses, which the Mount Adapter EF-EOS R accepts. Flange distance not yet sourced."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "canon-rf",
+      "type": "mount",
+      "name": "Canon RF",
+      "maker": "Canon",
+      "formats": [
+        "full-frame",
+        "aps-c"
+      ],
+      "source": {
+        "url": "https://canon-europe.com/cameras/eos-r50/specifications",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Lens mount listed as RF, natively supporting RF and RF-S lenses. Full-frame coverage of RF lenses per the RF 50mm F1.8 STM spec page (Image Size: Full frame)."
+      }
+    }
+  ],
+  "cameras": [
+    {
+      "schemaVersion": 1,
+      "id": "canon-eos-r50",
+      "type": "camera",
+      "maker": "Canon",
+      "model": "EOS R50",
+      "mount": "canon-rf",
+      "sensor": {
+        "format": "aps-c",
+        "widthMm": 22.3,
+        "heightMm": 14.9,
+        "megapixels": 24.2
+      },
+      "cropFactor": 1.6,
+      "stabilization": {
+        "present": false
+      },
+      "shutter": {
+        "mechanicalFastest": "1/4000",
+        "electronicFastest": "1/8000",
+        "longestTimed": "30",
+        "bulb": true
+      },
+      "iso": {
+        "min": 100,
+        "max": 32000,
+        "expandedMax": 51200
+      },
+      "battery": "LP-E17",
+      "weightG": 375,
+      "source": {
+        "url": "https://canon-europe.com/cameras/eos-r50/specifications",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Battery, ISO, no in-body IS and weight (375 g black, with battery and card) from https://hk.canon/en/consumer/eos-r50-body/specification."
+      }
+    }
+  ],
+  "lenses": [
+    {
+      "schemaVersion": 1,
+      "id": "canon-rf-50-f1.8-stm",
+      "type": "lens",
+      "maker": "Canon",
+      "model": "RF50mm F1.8 STM",
+      "mount": "canon-rf",
+      "coverage": "full-frame",
+      "focalMm": {
+        "min": 50,
+        "max": 50
+      },
+      "maxAperture": [
+        {
+          "atMm": 50,
+          "f": 1.8
+        }
+      ],
+      "minAperture": 22,
+      "stabilization": {
+        "present": false
+      },
+      "autofocus": "stm",
+      "filterThreadMm": 43,
+      "minFocusM": 0.3,
+      "maxMagnification": 0.25,
+      "weightG": 160,
+      "source": {
+        "url": "https://www.canon.co.uk/lenses/rf-50mm-f1-8-stm/specifications/",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Gear-type stepping motor. No lens IS listed on https://th.canon/en/consumer/rf50mm-f-1-8-stm/specification."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "canon-rf-s-18-45-f4.5-6.3-is-stm",
+      "type": "lens",
+      "maker": "Canon",
+      "model": "RF-S18-45mm F4.5-6.3 IS STM",
+      "mount": "canon-rf",
+      "coverage": "aps-c",
+      "focalMm": {
+        "min": 18,
+        "max": 45
+      },
+      "maxAperture": [
+        {
+          "atMm": 18,
+          "f": 4.5
+        },
+        {
+          "atMm": 45,
+          "f": 6.3
+        }
+      ],
+      "minAperture": 22,
+      "stabilization": {
+        "present": true,
+        "stops": 4
+      },
+      "autofocus": "stm",
+      "filterThreadMm": 49,
+      "minFocusM": 0.2,
+      "maxMagnification": 0.16,
+      "weightG": 130,
+      "source": {
+        "url": "https://sg.canon/en/consumer/rf-s18-45mm-f-4-5-6-3-is-stm/specification",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Minimum aperture 22-32 across the zoom. Closest focus and magnification are the AF values; in MF they are 0.15 m and 0.26x. IS up to 6.5 stops with Coordinated Control IS on compatible bodies."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "canon-rf-s-55-210-f5-7.1-is-stm",
+      "type": "lens",
+      "maker": "Canon",
+      "model": "RF-S55-210mm F5-7.1 IS STM",
+      "mount": "canon-rf",
+      "coverage": "aps-c",
+      "focalMm": {
+        "min": 55,
+        "max": 210
+      },
+      "maxAperture": [
+        {
+          "atMm": 55,
+          "f": 5
+        },
+        {
+          "atMm": 210,
+          "f": 7.1
+        }
+      ],
+      "minAperture": 22,
+      "stabilization": {
+        "present": true,
+        "stops": 4.5
+      },
+      "autofocus": "stm",
+      "filterThreadMm": 55,
+      "minFocusM": 0.73,
+      "maxMagnification": 0.28,
+      "weightG": 270,
+      "source": {
+        "url": "https://in.canon/en/consumer/rf-s55-210mm-f-5-7-1-is-stm/specification",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Minimum aperture 22-32 across the zoom. Closest focus 0.73 m at 210 mm and 1.0 m at 55 mm. IS up to 7 stops with Coordinated Control IS on compatible bodies."
+      }
+    }
+  ],
+  "filters": [
+    {
+      "schemaVersion": 1,
+      "id": "kf-concept-nano-x-magnetic-cpl-55",
+      "type": "filter",
+      "maker": "K&F Concept",
+      "model": "Nano-X magnetic CPL 55mm",
+      "kind": "cpl",
+      "sizeMm": 55,
+      "attach": "magnetic",
+      "source": {
+        "url": "https://www.kfconcept.com/SKU.1621_mcuv-cpl-nd1000-adapter-ring-55mm-magnetic-lens-filters-nano-xcel",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Part of the 55mm magnetic kit (SKU.1621) with MCUV, CPL, ND1000 and a magnetic adapter ring for the lens thread. Japanese AGC glass, 28-layer coating. The page FAQ mentions an 82mm version; the description and size selector say 55mm. Light loss is not stated."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kf-concept-nano-x-magnetic-mcuv-55",
+      "type": "filter",
+      "maker": "K&F Concept",
+      "model": "Nano-X magnetic MCUV 55mm",
+      "kind": "uv",
+      "sizeMm": 55,
+      "attach": "magnetic",
+      "source": {
+        "url": "https://www.kfconcept.com/SKU.1621_mcuv-cpl-nd1000-adapter-ring-55mm-magnetic-lens-filters-nano-xcel",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Part of the 55mm magnetic kit (SKU.1621) with MCUV, CPL, ND1000 and a magnetic adapter ring for the lens thread. Japanese AGC glass, 28-layer coating. The page FAQ mentions an 82mm version; the description and size selector say 55mm."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kf-concept-nano-x-magnetic-nd1000-55",
+      "type": "filter",
+      "maker": "K&F Concept",
+      "model": "Nano-X magnetic ND1000 55mm",
+      "kind": "nd",
+      "ndFactor": 1000,
+      "sizeMm": 55,
+      "attach": "magnetic",
+      "source": {
+        "url": "https://www.kfconcept.com/SKU.1621_mcuv-cpl-nd1000-adapter-ring-55mm-magnetic-lens-filters-nano-xcel",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Part of the 55mm magnetic kit (SKU.1621) with MCUV, CPL, ND1000 and a magnetic adapter ring for the lens thread. Japanese AGC glass, 28-layer coating. The page FAQ mentions an 82mm version; the description and size selector say 55mm. Marketed as 10-stop exposure control."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kf-concept-nano-x-mcuv-43",
+      "type": "filter",
+      "maker": "K&F Concept",
+      "model": "Nano-X HD MCUV 43mm",
+      "kind": "uv",
+      "sizeMm": 43,
+      "attach": "screw-in",
+      "source": {
+        "url": "https://www.kentfaith.com/KF01.1859_43mm-uv-lens-filter-hd-mcuv-ultraviolet-28-multi-coated-filters-nano-x-series-toughened-glass",
+        "retrieved": "2026-11-18",
+        "status": "draft",
+        "notes": "28 multi-coated layers, 3.3 mm frame. The page names the 43mm lens thread but does not say screw-in in so many words."
+      }
+    }
+  ],
+  "adapters": [
+    {
+      "schemaVersion": 1,
+      "id": "canon-mount-adapter-ef-eos-r",
+      "type": "adapter",
+      "maker": "Canon",
+      "model": "Mount Adapter EF-EOS R",
+      "kind": "mount-adapter",
+      "from": "canon-ef",
+      "to": "canon-rf",
+      "passesAutofocus": true,
+      "passesStabilization": true,
+      "source": {
+        "url": "https://www.canon-europe.com/lenses/eos-r-adapters/mount-adapter-ef-eos-r/index.html",
+        "retrieved": "2026-11-18",
+        "status": "draft",
+        "notes": "Page says it lets EF and EF-S lenses be used on EOS R cameras with the same performance and functionality as on EOS DSLRs; it does not name autofocus or IS explicitly. Weight about 110 g."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "kf-concept-step-up-49-55",
+      "type": "adapter",
+      "maker": "K&F Concept",
+      "model": "49-55mm step-up ring (KF05.334)",
+      "kind": "step-up-ring",
+      "from": 49,
+      "to": 55,
+      "source": {
+        "url": "https://kfconcept.com/KF05.334-2-pieces-49mm-to-55mm-camera-filter-adapter-ring",
+        "retrieved": "2026-11-18",
+        "status": "sourced",
+        "notes": "Aviation-grade aluminium, sold as a 2-pack with a cleaning cloth."
+      }
+    }
+  ]
+}
