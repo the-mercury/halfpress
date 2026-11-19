@@ -1,4 +1,4 @@
-name: Catalog checks
+name: Checks
 
 on:
   push:
@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   validate:
+    name: Catalog
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,8 +24,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Run validator tests
+      - name: Run catalog script tests
         run: python -m unittest discover -s tests -v
 
       - name: Validate catalog
         run: python scripts/validate_catalog.py
+
+      - name: Check app/data/catalog.json is up to date
+        run: python scripts/build_catalog.py --check
+
+  app:
+    name: App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run app tests
+        run: npm test
