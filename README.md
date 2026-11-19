@@ -6,9 +6,40 @@ It runs in the browser, installs to your phone's home screen, works offline, and
 
 ## Status
 
-Early planning. Version 1 starts with Canon RF bodies and RF/RF-S lenses.
+In development. The catalog covers a Canon EOS R50 kit, and the app has four screens (Scenes, Lenses, Exposure, ND timer) that read from it. The kit is fixed for now; My Kit, where you pick your own gear, comes next.
 
-## What it will do
+## Run it locally
+
+The app is plain HTML, CSS and JavaScript in `app/`, with no build step for the app itself.
+
+```
+npm run serve          # serves app/ at http://localhost:8000
+```
+
+Any static server works; the app only needs to be served over http(s), not opened as a file, so it can load its modules and catalog.
+
+To try it on a phone, host the `app/` folder on any static host (for example Netlify Drop), open it in Safari, then Share → Add to Home Screen. After the first visit it works offline.
+
+## Develop
+
+```
+pip install -r requirements-dev.txt
+python scripts/validate_catalog.py     # check catalog entries
+python scripts/build_catalog.py        # rebuild app/data/catalog.json after editing catalog/
+python -m unittest discover -s tests   # catalog script tests
+npm test                               # app logic tests (Node 22+)
+```
+
+| Path | What it holds |
+| --- | --- |
+| `catalog/` | One JSON file per camera, lens, filter, mount or adapter, plus the schemas |
+| `scripts/` | Validator and the build script that merges the catalog into `app/data/catalog.json` |
+| `app/js/optics.js` | Camera math: equivalent focal length, apertures, shutter rules, ND times, filter and mount fit |
+| `app/js/scenes.js` | Scene recipes and the rules that pick a lens from the kit |
+| `app/js/views/` | One file per screen |
+| `app/sw.js` | Offline cache; add new app files to its list (a test checks this) |
+
+## What it does
 
 | Feature | What you get |
 | --- | --- |
