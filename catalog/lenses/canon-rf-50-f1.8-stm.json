@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "canon-rf-50-f1.8-stm",
+  "type": "lens",
+  "maker": "Canon",
+  "model": "RF50mm F1.8 STM",
+  "mount": "canon-rf",
+  "coverage": "full-frame",
+  "focalMm": { "min": 50, "max": 50 },
+  "maxAperture": [{ "atMm": 50, "f": 1.8 }],
+  "minAperture": 22,
+  "stabilization": { "present": false },
+  "autofocus": "stm",
+  "filterThreadMm": 43,
+  "minFocusM": 0.3,
+  "maxMagnification": 0.25,
+  "weightG": 160,
+  "source": {
+    "url": "https://www.canon.co.uk/lenses/rf-50mm-f1-8-stm/specifications/",
+    "retrieved": "2026-11-18",
+    "status": "sourced",
+    "notes": "Gear-type stepping motor. No lens IS listed on https://th.canon/en/consumer/rf50mm-f-1-8-stm/specification."
+  }
+}
