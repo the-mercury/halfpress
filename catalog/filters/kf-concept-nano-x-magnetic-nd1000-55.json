@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "kf-concept-nano-x-magnetic-nd1000-55",
+  "type": "filter",
+  "maker": "K&F Concept",
+  "model": "Nano-X magnetic ND1000 55mm",
+  "kind": "nd",
+  "ndFactor": 1000,
+  "sizeMm": 55,
+  "attach": "magnetic",
+  "source": { "url": "https://www.kfconcept.com/SKU.1621_mcuv-cpl-nd1000-adapter-ring-55mm-magnetic-lens-filters-nano-xcel", "retrieved": "2026-11-18", "status": "sourced", "notes": "Part of the 55mm magnetic kit (SKU.1621) with MCUV, CPL, ND1000 and a magnetic adapter ring for the lens thread. Japanese AGC glass, 28-layer coating. The page FAQ mentions an 82mm version; the description and size selector say 55mm. Marketed as 10-stop exposure control." }
+}

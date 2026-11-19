@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "kf-concept-step-up-49-55",
+  "type": "adapter",
+  "maker": "K&F Concept",
+  "model": "49-55mm step-up ring (KF05.334)",
+  "kind": "step-up-ring",
+  "from": 49,
+  "to": 55,
+  "source": {
+    "url": "https://kfconcept.com/KF05.334-2-pieces-49mm-to-55mm-camera-filter-adapter-ring",
+    "retrieved": "2026-11-18",
+    "status": "sourced",
+    "notes": "Aviation-grade aluminium, sold as a 2-pack with a cleaning cloth."
+  }
+}

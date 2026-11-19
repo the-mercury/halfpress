@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "kf-concept-nano-x-mcuv-43",
+  "type": "filter",
+  "maker": "K&F Concept",
+  "model": "Nano-X HD MCUV 43mm",
+  "kind": "uv",
+  "sizeMm": 43,
+  "attach": "screw-in",
+  "source": {
+    "url": "https://www.kentfaith.com/KF01.1859_43mm-uv-lens-filter-hd-mcuv-ultraviolet-28-multi-coated-filters-nano-x-series-toughened-glass",
+    "retrieved": "2026-11-18",
+    "status": "draft",
+    "notes": "28 multi-coated layers, 3.3 mm frame. The page names the 43mm lens thread but does not say screw-in in so many words."
+  }
+}
