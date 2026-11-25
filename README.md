@@ -1,6 +1,8 @@
-# HalfPress
+# press/2
 
-A pocket field app for photographers. Add the camera, lenses and filters you own, and HalfPress gives you settings, framing and exposure help that fit that exact kit.
+Half a shutter press: the moment you focus and set up, before the shot. The repo and web address keep the old slug, `halfpress`.
+
+A pocket field app for photographers. Add the camera, lenses and filters you own, and press/2 gives you settings, framing and exposure help that fit that exact kit.
 
 It runs in the browser, installs to your phone's home screen, works offline, and needs no account.
 
@@ -73,6 +75,6 @@ npm test                               # app logic tests (Node 22+)
 ## License
 
 - **Code** (the app, scripts, tests and schemas): [MIT](LICENSE).
-- **Gear catalog data** (`catalog/` entries and `app/data/catalog.json`): [CC BY 4.0](catalog/LICENSE.md). Reuse it freely, with credit to HalfPress.
+- **Gear catalog data** (`catalog/` entries and `app/data/catalog.json`): [CC BY 4.0](catalog/LICENSE.md). Reuse it freely, with credit to press/2.
 
 Specifications come from each maker's published spec pages, linked in every entry. Brand and product names belong to their owners.

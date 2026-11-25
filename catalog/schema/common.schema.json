@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:halfpress:schema:common",
-  "title": "Shared definitions for HalfPress catalog entries",
+  "title": "Shared definitions for press/2 catalog entries",
   "$defs": {
     "id": {
       "description": "Lowercase slug, unique across the whole catalog. Must match the file name without .json.",
