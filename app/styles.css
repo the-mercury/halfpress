@@ -1,4 +1,4 @@
-/* HalfPress. One phone-width column; views switch from a bottom tab bar.
+/* press/2. One phone-width column; views switch from a bottom tab bar.
    Dark first, follows the device theme. */
 :root {
   --bg: #0e1217;

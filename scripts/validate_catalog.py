@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the HalfPress gear catalog.
+"""Validate the press/2 gear catalog.
 
 Checks every entry against its JSON Schema, then runs the checks a schema
 cannot express on its own: file names match ids, ids are unique, references
