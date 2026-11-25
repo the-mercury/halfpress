@@ -157,3 +157,5 @@ svg.ico { fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin:
 /* An odd last tile spans the row instead of sitting alone. */
 .tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
+/* Frame numbers along the top, like the edge print on a strip of negatives. */
+.edge { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.18em; color: var(--edge); opacity: 0.85; margin-bottom: 10px; }
