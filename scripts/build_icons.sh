@@ -5,7 +5,8 @@
 #   design/icon-full.svg  full-bleed square: iOS home screen and Android maskable,
 #                         where the system rounds the corners itself
 #
-# The letters in both SVGs are outlines from Bricolage Grotesque ExtraBold
+# The mark is one colour: "p" in Bricolage Grotesque ExtraBold, "/2" in a light
+# weight (380). The letters in both SVGs are outlines of that font
 # (SIL Open Font License), so rendering needs no font installed.
 set -eu
 cd "$(dirname "$0")/.."
