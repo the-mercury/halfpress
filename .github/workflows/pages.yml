@@ -44,6 +44,9 @@ jobs:
           rm -rf site/dev/tests
           sed -i 's/"name": "HalfPress"/"name": "HalfPress Dev"/; s/"short_name": "HalfPress"/"short_name": "HP Dev"/' site/dev/manifest.webmanifest
           sed -i 's/<title>\([^<]*\)<\/title>/<title>\1 (dev)<\/title>/; s/content="HalfPress"/content="HP Dev"/' site/dev/index.html
+          # A small tag naming the dev commit, to tell which build the phone is running.
+          tag="dev $(git -C dev rev-parse --short HEAD)"
+          sed -i "s|</body>|<div style=\"position:fixed;right:8px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:30;font:11px ui-monospace,Menlo,monospace;color:#94a3b1;background:rgba(14,18,23,.85);padding:2px 6px;border-radius:6px;pointer-events:none\">$tag</div></body>|" site/dev/index.html
 
       - uses: actions/configure-pages@v5
 
