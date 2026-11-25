@@ -26,12 +26,12 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
           path: main
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: dev
           path: dev
@@ -48,11 +48,11 @@ jobs:
           tag="dev $(git -C dev rev-parse --short HEAD)"
           sed -i "s|</body>|<div style=\"position:fixed;right:12px;top:calc(8px + env(safe-area-inset-top,0px));z-index:30;font:11px ui-monospace,Menlo,monospace;color:#94a3b1;background:rgba(14,18,23,.85);padding:2px 6px;border-radius:6px;pointer-events:none\">$tag</div></body>|" site/dev/index.html
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
