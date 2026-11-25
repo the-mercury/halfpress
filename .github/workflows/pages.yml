@@ -19,12 +19,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: GitHub Pages
+  build:
+    name: Build site
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -54,5 +51,15 @@ jobs:
         with:
           path: site
 
+  # A separate job, as in GitHub's own Pages workflow: deploying in the same job
+  # as the upload sometimes asked for the site before GitHub had it listed.
+  deploy:
+    name: GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
