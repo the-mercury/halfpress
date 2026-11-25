@@ -7,7 +7,7 @@
 // The live app and the dev preview (under dev/) share one origin, so each
 // copy names its cache after its own scope and only clears its own old caches.
 
-const VERSION = "halfpress-v4";
+const VERSION = "halfpress-v5";
 const NETWORK_TIMEOUT_MS = 3000;
 const SCOPE = self.registration.scope;
 const CACHE = `${VERSION} ${SCOPE}`;
@@ -31,6 +31,8 @@ const CORE = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
+  "./icons/icon-maskable-512.png",
+  "./icons/icon.svg",
 ];
 
 self.addEventListener("install", (event) => {
