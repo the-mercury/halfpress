@@ -28,6 +28,7 @@ To try it on a phone, host the `app/` folder on any static host (for example Net
 pip install -r requirements-dev.txt
 python scripts/validate_catalog.py     # check catalog entries
 python scripts/build_catalog.py        # rebuild app/data/catalog.json after editing catalog/
+scripts/build_icons.sh                 # re-render the PNG icons after editing an icon SVG
 python -m unittest discover -s tests   # catalog script tests
 npm test                               # app logic tests (Node 22+)
 ```
@@ -40,6 +41,7 @@ npm test                               # app logic tests (Node 22+)
 | `app/js/scenes.js` | Scene recipes and the rules that pick a lens from the kit |
 | `app/js/views/` | One file per screen |
 | `app/sw.js` | Offline cache; add new app files to its list (a test checks this) |
+| `app/icons/icon.svg`, `design/icon-full.svg` | Icon sources: the p/2 mark as outlines, rounded and full-bleed |
 
 ## What it does
 
