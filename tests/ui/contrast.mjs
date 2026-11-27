@@ -110,15 +110,35 @@ for (const scheme of SCHEMES) {
   for (const view of VIEWS) {
     await page.goto(`${base}#${view}`);
     await page.waitForSelector(`#view-${view}:not([hidden])`);
-    // Every scene, so each card variant (warnings, filters) gets looked at.
-    const states = view === "scenes" ? await page.locator("#sceneGrid button").count() : 1;
-    for (let i = 0; i < states; i++) {
-      if (view === "scenes") await page.locator("#sceneGrid button").nth(i).click();
+    // Every scene, and every Compare subject near and far, so each variant of
+    // card and note (warnings, tips, filters) gets looked at.
+    const steps = [];
+    if (view === "scenes") {
+      const n = await page.locator("#sceneGrid button").count();
+      for (let i = 0; i < n; i++) steps.push(async () => page.locator("#sceneGrid button").nth(i).click());
+    } else if (view === "compare") {
+      const n = await page.locator("#cmpSubject button").count();
+      for (let i = 0; i < n; i++) {
+        for (const pos of ["0", "max"]) {
+          steps.push(async () => {
+            await page.locator("#cmpSubject button").nth(i).click();
+            await page.locator("#cmpDist").evaluate((el, p) => {
+              el.value = p === "max" ? el.max : el.min;
+              el.dispatchEvent(new Event("input"));
+            }, pos);
+          });
+        }
+      }
+    } else {
+      steps.push(async () => {});
+    }
+    for (let i = 0; i < steps.length; i++) {
+      await steps[i]();
       const failures = await page.evaluate(audit);
       checked++;
       for (const f of failures) {
         problems++;
-        console.log(`${scheme} / ${view}${view === "scenes" ? ` #${i + 1}` : ""}: "${f.text}" (${f.cls}) is ${f.got}:1, needs ${f.need}:1`);
+        console.log(`${scheme} / ${view}${steps.length > 1 ? ` #${i + 1}` : ""}: "${f.text}" (${f.cls}) is ${f.got}:1, needs ${f.need}:1`);
       }
     }
   }
