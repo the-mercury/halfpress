@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const APP = fileURLToPath(new URL("../../app/", import.meta.url));
-const VIEWS = ["scenes", "lens", "exposure", "timer"];
+const VIEWS = ["scenes", "lens", "compare", "exposure", "timer"];
 const SCHEMES = ["dark", "light"];
 const TYPES = {
   ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
