@@ -75,55 +75,104 @@ const DRAW = {
     <rect x="-320" y="-200" width="150" height="130" fill="#9ed0ff"/><rect x="170" y="-200" width="150" height="130" fill="#9ed0ff"/>` },
 };
 
-// The sunny landscape from the Lenses tab, in a 150 x 100 frame.
+// The sunny landscape from the Lenses tab, in a 150 x 100 frame. Only the
+// far scenery (sky, sun, hills) is drawn here: it is far enough away that
+// its size barely changes. Anything near the subject would have to scale
+// with it, so a scale bar shows size instead.
 const DAY = `
   <rect width="150" height="100" fill="#9cc7e6"/><circle cx="124" cy="18" r="7" fill="#f6dc8a"/>
   <path d="M0 72 L22 52 L40 62 L66 44 L92 64 L116 52 L150 70 V82 H0 Z" fill="#7f9db5"/>
   <path d="M0 78 L30 68 L58 75 L86 66 L120 76 L150 70 V82 H0 Z" fill="#587f6f"/>
-  <rect y="80" width="150" height="20" fill="#5f8f52"/>
-  <rect x="18" y="70" width="2" height="11" fill="#5a4630"/><circle cx="19" cy="66" r="6" fill="#3f6f45"/>`;
-
-// The night city from the Exposure tab: buildings and lit windows (blurred
-// as one), plus street lights drawn as blur circles.
-const CITY = `
-  <rect x="2" y="28" width="28" height="60" fill="#28344a"/><rect x="34" y="16" width="24" height="72" fill="#222c40"/>
-  <rect x="62" y="34" width="32" height="54" fill="#2b3850"/><rect x="98" y="22" width="22" height="66" fill="#232e43"/>
-  <rect x="124" y="32" width="26" height="56" fill="#28344a"/>
-  <g fill="#f2c96b"><rect x="8" y="36" width="5" height="6"/><rect x="20" y="52" width="5" height="6"/><rect x="40" y="26" width="5" height="6"/>
-    <rect x="48" y="46" width="5" height="6"/><rect x="70" y="44" width="5" height="6"/><rect x="84" y="60" width="5" height="6"/>
-    <rect x="104" y="30" width="5" height="6"/><rect x="110" y="52" width="5" height="6"/><rect x="130" y="42" width="5" height="6"/><rect x="140" y="62" width="5" height="6"/></g>`;
-const STREET_LIGHTS = [[12, 14, "#ffd27a"], [32, 18, "#ff9e7a"], [54, 20, "#9ed0ff"], [76, 21, "#ffd27a"],
-  [98, 20, "#ff9e7a"], [120, 18, "#9ed0ff"], [140, 14, "#ffd27a"]];
+  <rect y="80" width="150" height="20" fill="#5f8f52"/>`;
 
 const place = (kind, x, groundY, cmToPx) =>
   `<g transform="translate(${x.toFixed(2)} ${groundY.toFixed(2)}) scale(${cmToPx.toFixed(5)})">${DRAW[kind].svg}</g>`;
 
-/** Subject drawn at its true size in a 150 x 100 landscape frame. */
-function reachPicture(subject, distanceM, focalMm, sensor) {
-  const sceneHcm = ((distanceM * sensor.heightMm) / focalMm) * 100;
-  const cmToPx = (100 / sceneHcm) * (subject.heightM * 100 / DRAW[subject.id].h);
-  return `<svg viewBox="0 0 150 100" aria-hidden="true">${DAY}${place(subject.id, 75, 92, cmToPx)}</svg>`;
+const BAR_LENGTHS_M = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50];
+
+/** A map-style scale bar for a frame drawn at `pxPerM`. */
+function scaleBar(pxPerM) {
+  const m = BAR_LENGTHS_M.find((l) => l * pxPerM >= 18) ?? BAR_LENGTHS_M.at(-1);
+  const w = m * pxPerM;
+  const label = m < 1 ? `${Math.round(m * 100)} cm` : `${m} m`;
+  return `<g transform="translate(6 94)" font-family="ui-monospace, Menlo, monospace" font-size="8">
+    <path d="M0 -4V0H${w.toFixed(2)}V-4" fill="none" stroke="#0c0f14" stroke-width="2.4"/>
+    <path d="M0 -4V0H${w.toFixed(2)}V-4" fill="none" stroke="#ffffff" stroke-width="1"/>
+    <text x="${(w + 3).toFixed(2)}" y="0" fill="#ffffff" stroke="#0c0f14" stroke-width="1.6" paint-order="stroke">${label}</text></g>`;
 }
 
+/** Subject drawn at its true size in a 150 x 100 landscape frame. */
+function reachPicture(subject, distanceM, focalMm, sensor) {
+  const sceneHm = (distanceM * sensor.heightMm) / focalMm;
+  const pxPerM = 100 / sceneHm;
+  const cmToPx = (pxPerM / 100) * ((subject.heightM * 100) / DRAW[subject.id].h);
+  return `<svg viewBox="0 0 150 100" aria-hidden="true">${DAY}${place(subject.id, 75, 92, cmToPx)}${scaleBar(pxPerM)}</svg>`;
+}
+
+// A row of city buildings behind the subject, in metres: [width, height].
+const BUILDINGS = [[14, 24], [18, 38], [12, 18], [20, 44], [16, 30], [22, 52], [13, 22], [17, 34]];
+const BUILDING_FILLS = ["#28344a", "#222c40", "#2b3850", "#232e43"];
+const LIGHT_COLOURS = ["#ffd27a", "#ff9e7a", "#9ed0ff"];
+const FAR_AWAY_M = 300;    // stands in for "far away" when drawing
 let blurIds = 0;
 
-/** Subject in focus in front of the night city, blurred by the true amount. */
-function blurPicture(framing, blur) {
+/**
+ * Subject in focus in front of the night city. The city is drawn at its real
+ * size for its distance, so a telephoto (standing farther back) shows it much
+ * larger behind the subject: the compression you see in real photos. Its
+ * buildings are blurred, and its street lights drawn as blur circles, by the
+ * amount the lens gives.
+ */
+function blurPicture(framing, blur, distanceM, behindM) {
   const id = `cmpBlur${blurIds++}`;
+  const drawing = DRAW[framing.draw];
+  const realHcm = framing.draw === "person" ? 175 : framing.subjectHeightM * 100;
+  const cmToPx = ((framing.fill * 100) / (framing.subjectHeightM * 100)) * (realHcm / drawing.h);
+  const groundY = 100 - framing.fill * 100 + drawing.h * cmToPx;
+
+  // Background scale: things D metres behind look s / (s + D) as big.
+  const D = Number.isFinite(behindM) ? behindM : FAR_AWAY_M;
+  const bgPxPerM = cmToPx * 100 * (distanceM / (distanceM + D));
+  const camHeightM = (groundY - 50) / (cmToPx * 100);           // height of the frame centre
+  const yAt = (hM) => 50 - (hM - camHeightM) * bgPxPerM;
+  const halfSpanM = 80 / bgPxPerM;
+
+  let city = "";
+  const total = BUILDINGS.reduce((a, [w]) => a + w + 2, 0);
+  const startM = -Math.ceil((halfSpanM + total) / total) * total;
+  for (let x = startM, i = 0; x < halfSpanM; i++) {
+    const [w, h] = BUILDINGS[i % BUILDINGS.length];
+    if (x + w > -halfSpanM) {
+      const x0 = 75 + x * bgPxPerM;
+      city += `<rect x="${x0.toFixed(2)}" y="${yAt(h).toFixed(2)}" width="${(w * bgPxPerM).toFixed(2)}" height="${(h * bgPxPerM).toFixed(2)}" fill="${BUILDING_FILLS[i % 4]}"/>`;
+      if (1.4 * bgPxPerM >= 0.5) {
+        for (let fy = 3, r = 0; fy + 2 < h; fy += 3.5, r++) {
+          for (let fx = 2, c = 0; fx + 1.4 < w - 1; fx += 3, c++) {
+            const px = x0 + fx * bgPxPerM;
+            if (px < -5 || px > 155 || (i * 7 + r * 3 + c * 5) % 3) continue;
+            city += `<rect x="${px.toFixed(2)}" y="${yAt(fy + 1.8).toFixed(2)}" width="${(1.4 * bgPxPerM).toFixed(2)}" height="${(1.8 * bgPxPerM).toFixed(2)}" fill="#f2c96b"/>`;
+          }
+        }
+      }
+    }
+    x += w + 2;
+  }
+  const groundBgY = yAt(0);
+
+  // Street lights 6 m up, every 10 m, drawn as blur circles.
   const d = Math.max(1.2, blur * 150);
   const opacity = Math.max(0.2, Math.min(0.95, 3 / d));
-  const lights = STREET_LIGHTS.map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="${(d / 2).toFixed(2)}" fill="${c}" opacity="${opacity.toFixed(2)}"/>`).join("");
-  // Scale so the framed part fills `fill` of the height; the top of the
-  // subject sits just under the top edge, the rest runs off the bottom.
-  const drawing = DRAW[framing.draw];
-  const scaleToReal = (framing.draw === "person" ? 175 : framing.subjectHeightM * 100) / drawing.h;
-  const cmToPx = ((framing.fill * 100) / (framing.subjectHeightM * 100)) * scaleToReal;
-  const topY = 100 - framing.fill * 100;
-  const groundY = topY + drawing.h * cmToPx;
+  let lights = "";
+  for (let k = Math.floor(-halfSpanM / 10) - 1; k * 10 < halfSpanM + 10; k++) {
+    const cx = 75 + (k * 10 + 5) * bgPxPerM;
+    if (cx < -d || cx > 150 + d) continue;
+    lights += `<circle cx="${cx.toFixed(2)}" cy="${yAt(6).toFixed(2)}" r="${(d / 2).toFixed(2)}" fill="${LIGHT_COLOURS[((k % 3) + 3) % 3]}" opacity="${opacity.toFixed(2)}"/>`;
+  }
+
   return `<svg viewBox="0 0 150 100" aria-hidden="true">
     <defs><filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(d / 3).toFixed(2)}"/></filter></defs>
-    <rect width="150" height="100" fill="#1b2433"/>
-    <g filter="url(#${id})">${CITY}<rect y="88" width="150" height="12" fill="#2c3340"/></g>${lights}
+    <rect width="150" height="100" fill="#141b27"/>
+    <g filter="url(#${id})">${city}<rect y="${groundBgY.toFixed(2)}" width="150" height="${Math.max(0, 100 - groundBgY).toFixed(2)}" fill="#2c3340"/></g>${lights}
     ${place(framing.draw, 75, groundY, cmToPx)}
   </svg>`;
 }
@@ -232,7 +281,7 @@ export const compareView = {
       const ranked = [...rows].sort((a, b) => b.blur - a.blur);
       $("#cmpBlur", root).innerHTML = ranked.map((r) => `
         <div class="cmp-row">
-          <div class="mini">${blurPicture(framing, r.blur)}</div>
+          <div class="mini">${blurPicture(framing, r.blur, r.distanceM, bg.behindM)}</div>
           <div class="cmp-text">
             <div class="row"><span class="chip ${lensClass(kit, r.lens)}">${esc(lensLabel(r.lens))}</span>${r === best ? '<span class="badge">Most blur</span>' : ""}</div>
             <p><b>${r.focalMm} mm at f/${r.fNumber}.</b> Stand ${fmtM(r.distanceM)} m away. ${r.tooClose
