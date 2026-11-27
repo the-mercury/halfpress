@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const APP = fileURLToPath(new URL("../../app/", import.meta.url));
-const VIEWS = ["scenes", "lens", "compare", "exposure", "timer"];
+const VIEWS = ["scenes", "lens", "exposure", "timer"];
 const SCHEMES = ["dark", "light"];
 const TYPES = {
   ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
@@ -110,19 +110,19 @@ for (const scheme of SCHEMES) {
   for (const view of VIEWS) {
     await page.goto(`${base}#${view}`);
     await page.waitForSelector(`#view-${view}:not([hidden])`);
-    // Every scene, and every Compare subject near and far, so each variant of
+    // Every scene, and every Lenses subject near and far, so each variant of
     // card and note (warnings, tips, filters) gets looked at.
     const steps = [];
     if (view === "scenes") {
       const n = await page.locator("#sceneGrid button").count();
       for (let i = 0; i < n; i++) steps.push(async () => page.locator("#sceneGrid button").nth(i).click());
-    } else if (view === "compare") {
-      const n = await page.locator("#cmpSubject button").count();
+    } else if (view === "lens") {
+      const n = await page.locator("#lensSubject button").count();
       for (let i = 0; i < n; i++) {
         for (const pos of ["0", "max"]) {
           steps.push(async () => {
-            await page.locator("#cmpSubject button").nth(i).click();
-            await page.locator("#cmpDist").evaluate((el, p) => {
+            await page.locator("#lensSubject button").nth(i).click();
+            await page.locator("#lensDist").evaluate((el, p) => {
               el.value = p === "max" ? el.max : el.min;
               el.dispatchEvent(new Event("input"));
             }, pos);

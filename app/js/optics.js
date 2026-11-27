@@ -167,8 +167,3 @@ export function blurCircle(focalMm, fNumber, distanceM, behindM, sensorWidthMm) 
   const share = Number.isFinite(behindM) ? (behindM * 1000) / (s + behindM * 1000) : 1;
   return ((focalMm * m) / fNumber) * share / sensorWidthMm;
 }
-
-/** How large things `behindM` behind the subject look, relative to their size at the subject. */
-export function backgroundScale(distanceM, behindM) {
-  return Number.isFinite(behindM) ? distanceM / (distanceM + behindM) : 0;
-}

@@ -93,7 +93,7 @@ test("mount fit: native, adapter, crop warning", () => {
   assert.equal(mountFit(apsc, ef).fit, "none");
 });
 
-import { backgroundScale, blurCircle, cropMegapixels, frameFill, printSizeCm } from "../js/optics.js";
+import { blurCircle, cropMegapixels, frameFill, printSizeCm } from "../js/optics.js";
 
 const r50 = { widthMm: 22.3, heightMm: 14.9 };
 const person = { heightM: 1.75, widthM: 0.5 };
@@ -133,10 +133,4 @@ test("which lens blurs most depends on how far the background is", () => {
 test("blur grows as you open the aperture and as the background recedes", () => {
   assert.ok(blurCircle(50, 1.8, 2, 5, 22.3) > blurCircle(50, 4, 2, 5, 22.3));
   assert.ok(blurCircle(50, 1.8, 2, 20, 22.3) > blurCircle(50, 1.8, 2, 2, 22.3));
-});
-
-test("background scale: how big things behind the subject look", () => {
-  assert.equal(backgroundScale(2, 2), 0.5);
-  assert.equal(backgroundScale(8, 2), 0.8);
-  assert.equal(backgroundScale(2, Infinity), 0);
 });
