@@ -109,19 +109,78 @@ function reachPicture(subject, distanceM, focalMm, sensor) {
   return `<svg viewBox="0 0 150 100" aria-hidden="true">${DAY}${place(subject.id, 75, 92, cmToPx)}${scaleBar(pxPerM)}</svg>`;
 }
 
-// A row of city buildings behind the subject, in metres: [width, height].
+// Backgrounds, in metres from the subject's centre line. Each suits its
+// distance and has detail at its own scale, so blur and size both show.
 const BUILDINGS = [[14, 24], [18, 38], [12, 18], [20, 44], [16, 30], [22, 52], [13, 22], [17, 34]];
 const BUILDING_FILLS = ["#28344a", "#222c40", "#2b3850", "#232e43"];
 const LIGHT_COLOURS = ["#ffd27a", "#ff9e7a", "#9ed0ff"];
 const FAR_AWAY_M = 300;    // stands in for "far away" when drawing
 let blurIds = 0;
 
+// Deterministic jitter, so pictures don't flicker between renders.
+const jitter = (n) => ((Math.sin(n * 12.9898) * 43758.5453) % 1 + 1) % 1;
+
+function hedge(at) {
+  // A garden hedge 1.8 m tall, leaves every 15 cm, string lights along it.
+  let out = at.rect(-60, 0, 120, 1.8, "#1f3a2a");
+  const step = 0.15;
+  for (let x = Math.floor(at.left / step) * step, i = 0; x < at.right; x += step, i++) {
+    for (let y = 0.1, j = 0; y < 1.8; y += step, j++) {
+      out += at.dot(x + jitter(i * 31 + j) * 0.08, y + jitter(i + j * 17) * 0.08, 0.055, j % 2 ? "#2f5a3e" : "#3a6b48");
+    }
+  }
+  return { scenery: out, lights: lightRow(at, 1.45, 0.45, 0.12) };
+}
+
+function park(at) {
+  // Park trees every 6 m, bushes along the path, string lights at 2 m.
+  let out = "";
+  for (let k = Math.floor(at.left / 6) - 1; k * 6 < at.right + 6; k++) {
+    const x = k * 6;
+    out += at.rect(x - 0.2, 0, 0.4, 3.2, "#3a2e24") + at.dot(x, 4.6, 2.2, "#2f5a3e") + at.dot(x - 1.1, 3.9, 1.4, "#3a6b48");
+  }
+  for (let k = Math.floor(at.left / 1.1) - 1; k * 1.1 < at.right + 1.1; k++) {
+    out += at.dot(k * 1.1 + jitter(k) * 0.3, 0.5 + jitter(k * 7) * 0.2, 0.62, k % 2 ? "#2f5a3e" : "#3a6b48");
+  }
+  return { scenery: out, lights: lightRow(at, 2, 1.2, 0.3) };
+}
+
+function city(at) {
+  let out = "";
+  const total = BUILDINGS.reduce((a, [w]) => a + w + 2, 0);
+  for (let x = -Math.ceil((-at.left + total) / total) * total, i = 0; x < at.right; i++) {
+    const [w, h] = BUILDINGS[i % BUILDINGS.length];
+    if (x + w > at.left) {
+      out += at.rect(x, 0, w, h, BUILDING_FILLS[i % 4]);
+      if (1.4 * at.pxPerM >= 0.5) {
+        for (let fy = 3, r = 0; fy + 2 < h; fy += 3.5, r++) {
+          for (let fx = 2, c = 0; fx + 1.4 < w - 1; fx += 3, c++) {
+            if ((i * 7 + r * 3 + c * 5) % 3 || x + fx < at.left - 2 || x + fx > at.right) continue;
+            out += at.rect(x + fx, fy, 1.4, 1.8, "#f2c96b");
+          }
+        }
+      }
+    }
+    x += w + 2;
+  }
+  return { scenery: out, lights: lightRow(at, 6, 10, 5) };
+}
+
+// A row of point lights at a height, every `step` metres: drawn later as
+// blur circles of the lens's true size.
+function lightRow(at, heightM, step, offset) {
+  const pts = [];
+  for (let k = Math.floor((at.left - offset) / step) - 1; k * step + offset < at.right + step; k++) {
+    pts.push([k * step + offset, heightM, LIGHT_COLOURS[((k % 3) + 3) % 3]]);
+  }
+  return pts;
+}
+
 /**
- * Subject in focus in front of the night city. The city is drawn at its real
- * size for its distance, so a telephoto (standing farther back) shows it much
- * larger behind the subject: the compression you see in real photos. Its
- * buildings are blurred, and its street lights drawn as blur circles, by the
- * amount the lens gives.
+ * Subject in focus in front of a background D metres behind. The background
+ * is drawn at its real size for that distance, so a telephoto (standing
+ * farther back) shows it larger behind the subject: compression. It is
+ * blurred, and its lights drawn as blur circles, by the amount the lens gives.
  */
 function blurPicture(framing, blur, distanceM, behindM) {
   const id = `cmpBlur${blurIds++}`;
@@ -130,51 +189,49 @@ function blurPicture(framing, blur, distanceM, behindM) {
   const cmToPx = ((framing.fill * 100) / (framing.subjectHeightM * 100)) * (realHcm / drawing.h);
   const groundY = 100 - framing.fill * 100 + drawing.h * cmToPx;
 
-  // Background scale: things D metres behind look s / (s + D) as big.
+  // Things D metres behind look s / (s + D) as big as at the subject.
   const D = Number.isFinite(behindM) ? behindM : FAR_AWAY_M;
-  const bgPxPerM = cmToPx * 100 * (distanceM / (distanceM + D));
-  const camHeightM = (groundY - 50) / (cmToPx * 100);           // height of the frame centre
-  const yAt = (hM) => 50 - (hM - camHeightM) * bgPxPerM;
-  const halfSpanM = 80 / bgPxPerM;
+  const pxPerM = cmToPx * 100 * (distanceM / (distanceM + D));
+  const camHeightM = (groundY - 50) / (cmToPx * 100);    // height of the frame centre
+  const X = (m) => 75 + m * pxPerM;
+  const Y = (m) => 50 - (m - camHeightM) * pxPerM;
+  const at = {
+    pxPerM, left: -80 / pxPerM, right: 80 / pxPerM,
+    rect: (x, y, w, h, fill) => {
+      const x0 = Math.max(-5, X(x)), x1 = Math.min(155, X(x + w));
+      const y0 = Math.max(-5, Y(y + h)), y1 = Math.min(105, Y(y));
+      return x1 > x0 && y1 > y0 ? `<rect x="${x0.toFixed(2)}" y="${y0.toFixed(2)}" width="${(x1 - x0).toFixed(2)}" height="${(y1 - y0).toFixed(2)}" fill="${fill}"/>` : "";
+    },
+    dot: (x, y, r, fill) => {
+      const cx = X(x), cy = Y(y), rr = r * pxPerM;
+      return cx + rr < -5 || cx - rr > 155 || cy + rr < -5 || cy - rr > 105 ? "" : `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${rr.toFixed(2)}" fill="${fill}"/>`;
+    },
+  };
+  const bg = D <= 4 ? hedge(at) : D <= 30 ? park(at) : city(at);
 
-  let city = "";
-  const total = BUILDINGS.reduce((a, [w]) => a + w + 2, 0);
-  const startM = -Math.ceil((halfSpanM + total) / total) * total;
-  for (let x = startM, i = 0; x < halfSpanM; i++) {
-    const [w, h] = BUILDINGS[i % BUILDINGS.length];
-    if (x + w > -halfSpanM) {
-      const x0 = 75 + x * bgPxPerM;
-      city += `<rect x="${x0.toFixed(2)}" y="${yAt(h).toFixed(2)}" width="${(w * bgPxPerM).toFixed(2)}" height="${(h * bgPxPerM).toFixed(2)}" fill="${BUILDING_FILLS[i % 4]}"/>`;
-      if (1.4 * bgPxPerM >= 0.5) {
-        for (let fy = 3, r = 0; fy + 2 < h; fy += 3.5, r++) {
-          for (let fx = 2, c = 0; fx + 1.4 < w - 1; fx += 3, c++) {
-            const px = x0 + fx * bgPxPerM;
-            if (px < -5 || px > 155 || (i * 7 + r * 3 + c * 5) % 3) continue;
-            city += `<rect x="${px.toFixed(2)}" y="${yAt(fy + 1.8).toFixed(2)}" width="${(1.4 * bgPxPerM).toFixed(2)}" height="${(1.8 * bgPxPerM).toFixed(2)}" fill="#f2c96b"/>`;
-          }
-        }
-      }
-    }
-    x += w + 2;
-  }
-  const groundBgY = yAt(0);
-
-  // Street lights 6 m up, every 10 m, drawn as blur circles.
   const d = Math.max(1.2, blur * 150);
-  const opacity = Math.max(0.2, Math.min(0.95, 3 / d));
-  let lights = "";
-  for (let k = Math.floor(-halfSpanM / 10) - 1; k * 10 < halfSpanM + 10; k++) {
-    const cx = 75 + (k * 10 + 5) * bgPxPerM;
-    if (cx < -d || cx > 150 + d) continue;
-    lights += `<circle cx="${cx.toFixed(2)}" cy="${yAt(6).toFixed(2)}" r="${(d / 2).toFixed(2)}" fill="${LIGHT_COLOURS[((k % 3) + 3) % 3]}" opacity="${opacity.toFixed(2)}"/>`;
-  }
+  const opacity = Math.max(0.25, Math.min(0.95, 3 / d));
+  const lights = bg.lights.map(([x, y, c]) => {
+    const cx = X(x), cy = Y(y);
+    return cx < -d || cx > 150 + d || cy < -d || cy > 100 + d ? ""
+      : `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(d / 2).toFixed(2)}" fill="${c}" opacity="${opacity.toFixed(2)}"/>`;
+  }).join("");
 
+  const ground = Y(0);
   return `<svg viewBox="0 0 150 100" aria-hidden="true">
     <defs><filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(d / 3).toFixed(2)}"/></filter></defs>
     <rect width="150" height="100" fill="#141b27"/>
-    <g filter="url(#${id})">${city}<rect y="${groundBgY.toFixed(2)}" width="150" height="${Math.max(0, 100 - groundBgY).toFixed(2)}" fill="#2c3340"/></g>${lights}
+    <g filter="url(#${id})">${bg.scenery}${ground < 100 ? `<rect y="${ground.toFixed(2)}" width="150" height="${(100 - ground).toFixed(2)}" fill="#2c3340"/>` : ""}</g>${lights}
     ${place(framing.draw, 75, groundY, cmToPx)}
   </svg>`;
+}
+
+/** Plain words for a blur circle size (share of the frame width). */
+function blurWords(blur) {
+  if (blur >= 0.03) return "Background very soft";
+  if (blur >= 0.015) return "Background soft";
+  if (blur >= 0.006) return "Background slightly soft";
+  return "Background nearly sharp";
 }
 
 const fmtM = (m) => (m < 10 ? m.toFixed(1) : Math.round(m)).toString().replace(/\.0$/, "");
@@ -280,17 +337,17 @@ export const compareView = {
       const best = usable.sort((a, b) => b.blur - a.blur)[0];
       const ranked = [...rows].sort((a, b) => b.blur - a.blur);
       $("#cmpBlur", root).innerHTML = ranked.map((r) => `
-        <div class="cmp-row">
+        <div class="cmp-row wide">
           <div class="mini">${blurPicture(framing, r.blur, r.distanceM, bg.behindM)}</div>
           <div class="cmp-text">
             <div class="row"><span class="chip ${lensClass(kit, r.lens)}">${esc(lensLabel(r.lens))}</span>${r === best ? '<span class="badge">Most blur</span>' : ""}</div>
-            <p><b>${r.focalMm} mm at f/${r.fNumber}.</b> Stand ${fmtM(r.distanceM)} m away. ${r.tooClose
-              ? `Closer than this lens can focus (${r.lens.minFocusM} m).`
-              : `Blur circles ${(r.blur * 100).toFixed(1)}% of the frame wide.`}</p>
+            <p><b>${r.tooClose ? "Too close to focus" : blurWords(r.blur)}.</b> ${r.focalMm} mm at f/${r.fNumber}, standing ${fmtM(r.distanceM)} m away. ${r.tooClose
+              ? `This lens focuses no closer than ${r.lens.minFocusM} m.`
+              : `Lights become circles ${(r.blur * 100).toFixed(1)}% of the frame wide.`}</p>
           </div>
         </div>`).join("");
       $("#cmpBlurNote", root).textContent = Number.isFinite(bg.behindM)
-        ? "With the background close behind, a shorter lens you stand nearer with tends to win: from farther back, the background is relatively closer to your subject."
+        ? "With the background close behind, every lens leaves it fairly sharp. The biggest gain is moving your subject away from it. Among lenses, the one you stand nearest with tends to win: from farther back, the background is relatively closer to your subject."
         : "With a far background, blur for the same framing comes down to focal length divided by f-number. That is why a long zoom can rival a fast prime.";
       store.set("halfpress.cmp.framing", framing.id);
       store.set("halfpress.cmp.background", bg.id);
