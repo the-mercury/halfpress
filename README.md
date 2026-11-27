@@ -29,6 +29,7 @@ pip install -r requirements-dev.txt
 python scripts/validate_catalog.py     # check catalog entries
 python scripts/build_catalog.py        # rebuild app/data/catalog.json after editing catalog/
 scripts/build_icons.sh                 # re-render the PNG icons after editing an icon SVG
+npm run test:ui                        # text contrast on every screen, dark and light (needs Playwright)
 python -m unittest discover -s tests   # catalog script tests
 npm test                               # app logic tests (Node 22+)
 ```
