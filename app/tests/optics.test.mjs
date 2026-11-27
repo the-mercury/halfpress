@@ -93,7 +93,7 @@ test("mount fit: native, adapter, crop warning", () => {
   assert.equal(mountFit(apsc, ef).fit, "none");
 });
 
-import { backgroundBlur, blurriestSetting, cropMegapixels, frameFill, printSizeCm } from "../js/optics.js";
+import { backgroundScale, blurCircle, cropMegapixels, frameFill, printSizeCm } from "../js/optics.js";
 
 const r50 = { widthMm: 22.3, heightMm: 14.9 };
 const person = { heightM: 1.75, widthM: 0.5 };
@@ -114,34 +114,29 @@ test("print size from megapixels at 300 dpi", () => {
   assert.equal(Math.round(printSizeCm(6)), 25);
 });
 
-test("background blur for the same framing grows with focal length over f-number", () => {
-  const framing = { subjectHeightM: 0.6, fill: 0.9, sensor: r50, behindM: Infinity };
-  const prime = backgroundBlur({ ...framing, focalMm: 50, fNumber: 1.8 });
-  const tele = backgroundBlur({ ...framing, focalMm: 210, fNumber: 7.1 });
-  // Far background: blur is f·m/N, so the ratio is (50/1.8) / (210/7.1).
-  assert.ok(Math.abs(prime.blur / tele.blur - (50 / 1.8) / (210 / 7.1)) < 1e-9);
-  assert.ok(tele.distanceM > prime.distanceM * 4);
+test("for the same framing and a far background, blur follows focal length over f-number", () => {
+  // Frame a 0.6 m subject at 90% of the 14.9 mm height: s = f (1 + 1/m).
+  const m = (0.9 * 14.9) / 600;
+  const at = (f, n) => blurCircle(f, n, (f * (1 + 1 / m)) / 1000, Infinity, 22.3);
+  assert.ok(Math.abs(at(50, 1.8) / at(210, 7.1) - (50 / 1.8) / (210 / 7.1)) < 1e-9);
 });
 
 test("which lens blurs most depends on how far the background is", () => {
-  const at = (behindM) => {
-    const framing = { subjectHeightM: 0.6, fill: 0.9, sensor: r50, behindM };
-    return [
-      backgroundBlur({ ...framing, focalMm: 50, fNumber: 1.8 }).blur,
-      backgroundBlur({ ...framing, focalMm: 210, fNumber: 7.1 }).blur,
-    ];
-  };
-  // Far background: 210/7.1 beats 50/1.8. Two metres behind: standing 4x
+  const m = (0.9 * 14.9) / 600;
+  const at = (f, n, behind) => blurCircle(f, n, (f * (1 + 1 / m)) / 1000, behind, 22.3);
+  // Far background: 210/7.1 edges out 50/1.8. Two metres behind: standing 4x
   // farther back with the telephoto puts the background relatively closer.
-  const [primeFar, teleFar] = at(Infinity);
-  assert.ok(teleFar > primeFar);
-  const [primeNear, teleNear] = at(2);
-  assert.ok(primeNear > teleNear * 2);
+  assert.ok(at(210, 7.1, Infinity) > at(50, 1.8, Infinity));
+  assert.ok(at(50, 1.8, 2) > at(210, 7.1, 2) * 2);
 });
 
-test("the blurriest setting on a zoom is its long end", () => {
-  const lens = { focalMm: { min: 55, max: 210 }, maxAperture: [{ atMm: 55, f: 5 }, { atMm: 210, f: 7.1 }] };
-  const best = blurriestSetting(lens, { subjectHeightM: 0.6, fill: 0.9, sensor: r50, behindM: Infinity });
-  assert.equal(best.focalMm, 210);
-  assert.equal(best.fNumber, 7.1);
+test("blur grows as you open the aperture and as the background recedes", () => {
+  assert.ok(blurCircle(50, 1.8, 2, 5, 22.3) > blurCircle(50, 4, 2, 5, 22.3));
+  assert.ok(blurCircle(50, 1.8, 2, 20, 22.3) > blurCircle(50, 1.8, 2, 2, 22.3));
+});
+
+test("background scale: how big things behind the subject look", () => {
+  assert.equal(backgroundScale(2, 2), 0.5);
+  assert.equal(backgroundScale(8, 2), 0.8);
+  assert.equal(backgroundScale(2, Infinity), 0);
 });
