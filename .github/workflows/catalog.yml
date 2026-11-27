@@ -45,3 +45,21 @@ jobs:
 
       - name: Run app tests
         run: npm test
+
+  ui:
+    name: Contrast
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Check text contrast on every screen, dark and light
+        run: npm run test:ui
