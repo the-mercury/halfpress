@@ -1,14 +1,45 @@
-// Lens view: zoom through each lens in the kit and see what it frames.
+// Lens view: zoom through each lens in the kit and see what it frames. A
+// subject stands in the scene at its true size for your distance, so the
+// picture also answers "how big will it be, and can I crop it?".
 
-import { $, $$, esc, lensClass, lensLabel } from "../dom.js";
+import { $, $$, esc, lensClass, lensLabel, store } from "../dom.js";
 import {
   angleOfView,
+  cropMegapixels,
   equivalentFocal,
   filterFit,
   formatShutter,
+  frameFill,
   handheldShutter,
+  printSizeCm,
   widestAperture,
 } from "../optics.js";
+import { SUBJECTS, drawSubject } from "../subjects.js";
+
+// Your distance from the subject, metres.
+const DISTANCES = [0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 7, 10, 15, 20, 30, 50, 75, 100, 150, 200, 300];
+const DEFAULT_DISTANCE_M = 10;
+const GROUND_Y = 107;      // where the subject stands in the scene, SVG units
+const CROP_TARGET = 0.6;   // crop until the subject fills 60% of the frame
+const MIN_USEFUL_MP = 2;   // below this a crop is too soft to use
+const KEY = { subject: "halfpress.lens.subject", distance: "halfpress.lens.distance" };
+
+const fmtM = (m) => (m < 10 ? m.toFixed(1) : Math.round(m)).toString().replace(/\.0$/, "");
+const pct = (x) => `${x < 0.01 ? "under 1" : Math.round(x * 100)}%`;
+
+/** For a person or child taller than the frame, which portrait crop it is. */
+function portraitCrop(subject, sceneHm) {
+  if (!["person", "child"].includes(subject.id) || sceneHm >= subject.heightM) return null;
+  const share = sceneHm / subject.heightM;
+  return share >= 0.5 ? "half body" : share >= 0.25 ? "head and shoulders" : "face only";
+}
+
+/** The longest focal length on a lens at which the whole subject still fits. */
+function reachOf(lens, subject, distanceM, sensor) {
+  const fill = frameFill(subject, distanceM, lens.focalMm.max, sensor);
+  const focal = fill > 0.95 ? Math.max(lens.focalMm.min, Math.floor((lens.focalMm.max * 0.95) / fill)) : lens.focalMm.max;
+  return { lens, focal, fill: frameFill(subject, distanceM, focal, sensor) };
+}
 
 // A simple scene drawn at the widest framing; zooming scales it up.
 const SCENE_SVG = `
@@ -18,10 +49,7 @@ const SCENE_SVG = `
   <path d="M-600 96 L40 80 L96 90 L150 74 L214 90 L270 78 L900 96 Z" fill="#587f6f"/>
   <rect x="-3000" y="95" width="6300" height="3100" fill="#5f8f52"/>
   <rect x="66" y="84" width="3" height="16" fill="#5a4630"/><circle cx="67.5" cy="78" r="10" fill="#3f6f45"/>
-  <rect x="222" y="88" width="2.4" height="12" fill="#5a4630"/><circle cx="223.2" cy="83" r="7.5" fill="#3f6f45"/>
-  <rect x="148.8" y="101.4" width="1" height="5.6" fill="#2b3a55"/><rect x="150.2" y="101.4" width="1" height="5.6" fill="#2b3a55"/>
-  <rect x="148.6" y="96.4" width="2.8" height="5.4" rx="1" fill="#d9534f"/><circle cx="150" cy="94.6" r="1.6" fill="#f0c9a4"/>
-  <ellipse cx="155.2" cy="104.6" rx="2.4" ry="1.2" fill="#c98b4a"/><circle cx="157.7" cy="103.5" r="0.95" fill="#c98b4a"/>`;
+  <rect x="222" y="88" width="2.4" height="12" fill="#5a4630"/><circle cx="223.2" cy="83" r="7.5" fill="#3f6f45"/>`;
 
 export const lensView = {
   id: "lens",
@@ -43,7 +71,7 @@ export const lensView = {
         ${kit.lenses.map((l, i) => `<button type="button" class="${lensClass(kit, l)}" data-i="${i}" aria-pressed="false">${esc(lensLabel(l))}</button>`).join("")}
       </div>
       <div class="frame">
-        <svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g id="vfZoom">${SCENE_SVG}</g></svg>
+        <svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g id="vfZoom">${SCENE_SVG}<g id="vfSubject"></g></g></svg>
         <span class="tag" id="vfTag"></span>
       </div>
       <div class="ctl">
@@ -51,27 +79,84 @@ export const lensView = {
         <input type="range" id="focal" step="1">
         <span class="effect" id="focalNote"></span>
       </div>
+      <div class="seg" id="lensSubject" role="group" aria-label="Subject">
+        ${SUBJECTS.map((x) => `<button type="button" data-id="${x.id}" aria-pressed="false">${esc(x.label)}</button>`).join("")}
+      </div>
+      <div class="ctl">
+        <div class="row"><label for="lensDist">Your distance</label><span class="val" id="lensDistVal"></span></div>
+        <input type="range" id="lensDist" min="0" max="${DISTANCES.length - 1}" step="1">
+      </div>
       <div class="tiles" id="lensTiles"></div>
+      <div class="notes" id="lensNotes" aria-live="polite"></div>
       <div class="panel" id="lensFacts"></div>`;
 
     const slider = $("#focal", root);
+    const dist = $("#lensDist", root);
+    let subject = SUBJECTS.find((x) => x.id === store.get(KEY.subject)) ?? SUBJECTS[0];
+    const saved = Number(store.get(KEY.distance));
+    dist.value = DISTANCES.indexOf(DISTANCES.includes(saved) ? saved : DEFAULT_DISTANCE_M);
+    // Pixels per metre at the subject when framed by the widest lens in the kit.
+    const widestMm = baseEq / crop;
 
     const update = () => {
       const f = Number(slider.value);
+      const d = DISTANCES[Number(dist.value)];
       const eq = equivalentFocal(f, crop);
       const isStops = current.stabilization.present ? current.stabilization.stops ?? 0 : 0;
       const bodyStops = camera.stabilization.present ? camera.stabilization.stops ?? 0 : 0;
       const angle = angleOfView(f, camera.sensor.widthMm);
+
+      // The subject at true size, with the camera aimed at it: centred when it
+      // fits, at its top when it doesn't (a person up close becomes a portrait).
+      const pxPerM0 = 200 / ((d * camera.sensor.heightMm) / widestMm);
+      const sceneHm = (d * camera.sensor.heightMm) / f;
+      const aimM = subject.heightM - Math.min(subject.heightM, sceneHm) / 2;
+      const aimY = GROUND_Y - aimM * pxPerM0;
+      $("#vfSubject", root).innerHTML = drawSubject(subject, 150, GROUND_Y, pxPerM0);
       $("#vfZoom", root).setAttribute("transform",
-        `translate(150 100) scale(${((f * crop) / baseEq).toFixed(3)}) translate(-150 -100)`);
-      $("#vfTag", root).textContent = `${f} mm · looks like ${eq} mm`;
+        `translate(150 100) scale(${((f * crop) / baseEq).toFixed(3)}) translate(-150 ${(-aimY).toFixed(2)})`);
+      $("#vfTag", root).textContent = `${f} mm · looks like ${eq} mm · ${fmtM(d)} m away`;
       $("#focalVal", root).textContent = `${f} mm`;
-      const tile = (k, v) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+      $("#lensDistVal", root).textContent = `${fmtM(d)} m`;
+
+      const fill = frameFill(subject, d, f, camera.sensor);
+      const framing = portraitCrop(subject, sceneHm);
+      const mp = cropMegapixels(camera.sensor.megapixels, Math.min(fill, 1), CROP_TARGET);
+      const tooClose = current.minFocusM && d < current.minFocusM;
+      const tile = (k, v, small = false) => `<div class="tile"><div class="k">${k}</div><div class="v${small ? " small" : ""}">${v}</div></div>`;
       $("#lensTiles", root).innerHTML =
         tile("Full-frame look", `${eq} mm`) +
         tile("Widest aperture", `f/${widestAperture(current, f)}`) +
         tile("Slowest handheld", formatShutter(handheldShutter(f, crop, Math.max(isStops, bodyStops)))) +
-        tile("Angle of view", `${angle.toFixed(angle < 10 ? 1 : 0)}°`);
+        tile("Angle of view", `${angle.toFixed(angle < 10 ? 1 : 0)}°`) +
+        tile(`${esc(subject.label)} fills`, framing ? `Cropped: ${framing}` : fill > 1 ? "Doesn't fit" : pct(fill), true) +
+        tile("After a crop", framing || fill >= CROP_TARGET ? "No crop needed" : fill > 1 ? "Doesn't fit" : `${mp.toFixed(mp < 10 ? 1 : 0)} MP`, true);
+
+      // Notes for the points this setup has crossed, most important first.
+      const notes = [];
+      if (tooClose) notes.push(["warning", `Too close to focus. This lens focuses no closer than ${current.minFocusM} m.`]);
+      if (framing) {
+        notes.push(["tip", framing === "face only"
+          ? "Only the face fits. Step back or zoom out for head and shoulders."
+          : `Cropped to ${framing}: a portrait framing.`]);
+      } else if (fill > 1) {
+        notes.push(["warning", `The ${subject.noun} doesn't fit. ${f > current.focalMm.min ? "Zoom out, or step" : "Step"} back to about ${fmtM((d * fill) / 0.9)} m.`]);
+      } else if (fill < CROP_TARGET) {
+        notes.push(mp < MIN_USEFUL_MP
+          ? ["warning", `Too small to crop into a usable picture (${mp.toFixed(1)} MP left). Get closer or use a longer lens.`]
+          : ["tip", `The ${subject.noun} fills ${pct(fill)} of the frame. Cropping in leaves ${mp.toFixed(mp < 10 ? 1 : 0)} MP, enough for a sharp print up to ${Math.round(printSizeCm(mp))} cm wide.`]);
+      }
+      const reach = kit.lenses.map((l) => reachOf(l, subject, d, camera.sensor)).filter((r) => r.fill <= 1);
+      const best = reach.reduce((m, r) => (!m || r.fill > m.fill ? r : m), null);
+      if (best && kit.lenses.length > 1 && !framing) {
+        notes.push(["tip", best.lens === current
+          ? `From ${fmtM(d)} m, this is your lens with the most reach for a ${subject.noun}.`
+          : `From ${fmtM(d)} m, the ${esc(lensLabel(best.lens))} at ${best.focal} mm makes the ${subject.noun} biggest (${pct(best.fill)} of the frame).`]);
+      }
+      $("#lensNotes", root).innerHTML = notes.slice(0, 3).map(([cls, text]) => `<p class="${cls}">${text}</p>`).join("");
+      $$("#lensSubject button", root).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === subject.id)));
+      store.set(KEY.subject, subject.id);
+      store.set(KEY.distance, String(d));
     };
 
     const facts = () => {
@@ -107,6 +192,11 @@ export const lensView = {
 
     $$("#lensSeg button", root).forEach((b) => b.addEventListener("click", () => select(Number(b.dataset.i))));
     slider.addEventListener("input", update);
+    dist.addEventListener("input", update);
+    $$("#lensSubject button", root).forEach((b) => b.addEventListener("click", () => {
+      subject = SUBJECTS.find((x) => x.id === b.dataset.id);
+      update();
+    }));
     if (kit.lenses.length) select(0);
   },
 };
