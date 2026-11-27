@@ -2,7 +2,16 @@
 // Ranges come from the selected lens and the camera in the kit.
 
 import { $, $$, esc, lensClass, lensLabel } from "../dom.js";
-import { F_STOPS, SHUTTER_STOPS, exposureValue, formatShutter, parseShutter } from "../optics.js";
+import { F_STOPS, SHUTTER_STOPS, blurCircle, exposureValue, formatShutter, parseShutter, widestAperture } from "../optics.js";
+
+// How far the city is behind the dog. Background blur depends on this as much
+// as on the aperture.
+const BACKGROUNDS = [["1 m", 1], ["3 m", 3], ["10 m", 10], ["Far", Infinity]];
+const DOG_WIDTH_M = 0.9;
+const DOG_SHARE = 0.32;    // the dog spans about a third of the picture's width
+// Blur is drawn larger than life (true size would be a few pixels on a phone),
+// keeping the proportions between settings right.
+const BLUR_BOOST = 3;
 
 // Scene light levels as EV at ISO 100.
 const LIGHT = [
@@ -10,7 +19,7 @@ const LIGHT = [
 ];
 
 const PICTURE = `
-  <svg id="exBg" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="transform:scale(1.12)">
+  <svg id="exBgPic" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="transform:scale(1.12)">
     <rect width="300" height="200" fill="#1b2433"/>
     <rect x="8" y="58" width="52" height="100" fill="#28344a"/><rect x="70" y="36" width="44" height="122" fill="#222c40"/>
     <rect x="124" y="70" width="60" height="88" fill="#2b3850"/><rect x="196" y="46" width="40" height="112" fill="#232e43"/>
@@ -34,6 +43,8 @@ const PICTURE = `
   </svg>
   <canvas id="exNoise" width="150" height="100" aria-hidden="true" style="image-rendering:pixelated;mix-blend-mode:screen"></canvas>`;
 
+const fmtM = (m) => (m < 10 ? m.toFixed(1) : Math.round(m)).toString().replace(/\.0$/, "");
+
 export const exposureView = {
   id: "exposure",
   label: "Exposure",
@@ -49,6 +60,8 @@ export const exposureView = {
     for (let v = camera.iso.min; v <= isoMax; v *= 2) isos.push(v);
     let apertures = [];
     let ev = 12;
+    let lens = kit.lenses[0];
+    let behindM = 10;
 
     root.innerHTML = `
       <div class="head">
@@ -59,6 +72,10 @@ export const exposureView = {
         ${kit.lenses.map((l, i) => `<button type="button" class="${lensClass(kit, l)}" data-i="${i}" aria-pressed="false">${esc(lensLabel(l))}</button>`).join("")}
       </div>
       <div class="frame" id="exFrame">${PICTURE}</div>
+      <div class="ctl"><div class="row"><label>Background behind the dog</label></div>
+        <div class="seg" id="exBg" role="group" aria-label="Background distance">
+          ${BACKGROUNDS.map(([name, m], i) => `<button type="button" data-i="${i}" aria-pressed="${m === 10}">${name}</button>`).join("")}
+        </div></div>
       <div class="seg" id="exLight" role="group" aria-label="Light">
         ${LIGHT.map(([name, v]) => `<button type="button" data-ev="${v}" aria-pressed="${v === ev}">${name}</button>`).join("")}
       </div>
@@ -99,12 +116,20 @@ export const exposureView = {
       $("#exAVal", root).textContent = `f/${f}`;
       $("#exSVal", root).textContent = formatShutter(t);
       $("#exIVal", root).textContent = expanded ? `H ${i}` : String(i);
-      $("#exAFx", root).textContent = f < 2.8 ? "Very blurry background" : f < 5.6 ? "Blurry background" : f < 8 ? "Some background blur" : "Sharp front to back";
+      // Real optics: the dog framed as drawn, at the longest focal length this
+      // lens offers at f, background `behindM` behind it.
+      let focal = lens.focalMm.max;
+      while (focal > lens.focalMm.min && widestAperture(lens, focal) > f + 1e-9) focal--;
+      const distM = ((DOG_WIDTH_M / DOG_SHARE) * focal) / camera.sensor.widthMm;
+      const share = blurCircle(focal, f, distM, behindM, camera.sensor.widthMm);
+      const words = share >= 0.03 ? "Very blurry background" : share >= 0.015 ? "Blurry background" : share >= 0.006 ? "Some background blur" : "Background nearly sharp";
+      $("#exAFx", root).textContent = `${words} · ${focal} mm, ${fmtM(distM)} m from the dog`;
       $("#exSFx", root).textContent = t <= 1 / 1000 ? "Freezes fast action" : t <= 1 / 250 ? "Freezes walking pace" : t <= 1 / 60 ? "Still subjects, handheld" : t <= 1 / 15 ? "Risky handheld, motion blurs" : "Tripod needed";
       $("#exIFx", root).textContent = (i <= 400 ? "Clean image" : i <= 1600 ? "Slight grain" : i <= 6400 ? "Noticeable grain" : "Heavy grain") + (expanded ? " · expanded ISO" : "");
 
-      const blur = Math.max(0, 9 * (1 - Math.log2(f / 1.4) / Math.log2(16 / 1.4)));
-      $("#exBg", root).style.filter = `blur(${blur.toFixed(1)}px)`;
+      const widthPx = $("#exFrame", root).clientWidth || 360;
+      const blurPx = (share * widthPx * BLUR_BOOST) / 2.2;
+      $("#exBgPic", root).style.filter = `blur(${blurPx.toFixed(1)}px)`;
       // Motion trails start below 1/250, the speed the label calls freezing walking pace.
       const spread = t > 1 / 250 + 1e-9 ? Math.min(38, 6 * Math.log2(t * 250)) : 0;
       let ghosts = "";
@@ -123,7 +148,7 @@ export const exposureView = {
     };
 
     const pickLens = (idx) => {
-      const lens = kit.lenses[idx];
+      lens = kit.lenses[idx];
       const widest = Math.min(...lens.maxAperture.map((p) => p.f));
       const narrowest = lens.minAperture ?? 22;
       apertures = F_STOPS.filter((f) => f >= widest - 1e-9 && f <= narrowest + 1e-9);
@@ -139,6 +164,11 @@ export const exposureView = {
     iso.value = 0;
     [a, s, iso].forEach((el) => el.addEventListener("input", update));
     $$("#exLens button", root).forEach((b) => b.addEventListener("click", () => pickLens(Number(b.dataset.i))));
+    $$("#exBg button", root).forEach((b) => b.addEventListener("click", () => {
+      behindM = BACKGROUNDS[Number(b.dataset.i)][1];
+      $$("#exBg button", root).forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+      update();
+    }));
     $$("#exLight button", root).forEach((b) => b.addEventListener("click", () => {
       ev = Number(b.dataset.ev);
       $$("#exLight button", root).forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
