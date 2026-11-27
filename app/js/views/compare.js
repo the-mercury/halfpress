@@ -133,14 +133,15 @@ function hedge(at) {
 }
 
 function park(at) {
-  // Park trees every 6 m, bushes along the path, string lights at 2 m.
+  // Park trees every 6 m, placed so the subject stands between two of them
+  // (no tree growing out of a head), bushes along the path, lights at 2 m.
   let out = "";
   for (let k = Math.floor(at.left / 6) - 1; k * 6 < at.right + 6; k++) {
-    const x = k * 6;
+    const x = k * 6 + 3;
     out += at.rect(x - 0.2, 0, 0.4, 3.2, "#3a2e24") + at.dot(x, 4.6, 2.2, "#2f5a3e") + at.dot(x - 1.1, 3.9, 1.4, "#3a6b48");
   }
   for (let k = Math.floor(at.left / 1.1) - 1; k * 1.1 < at.right + 1.1; k++) {
-    out += at.dot(k * 1.1 + jitter(k) * 0.3, 0.5 + jitter(k * 7) * 0.2, 0.62, k % 2 ? "#2f5a3e" : "#3a6b48");
+    out += at.dot(k * 1.1 + jitter(k) * 0.3, 0.8 + jitter(k * 7) * 0.25, 0.75, k % 2 ? "#2f5a3e" : "#3a6b48");
   }
   return { scenery: out, lights: lightRow(at, 2, 1.2, 0.3) };
 }
