@@ -146,7 +146,7 @@ input[type="range"]:disabled { opacity: 0.4; }
 .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); color: var(--fg); border-top: 1px solid var(--line);
   padding: 6px max(16px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .tabbar .inner { max-width: 480px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
-.tabbar button { background: none; border: 0; border-radius: var(--radius); min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.tabbar button { background: none; border: 0; border-radius: var(--radius); min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: var(--muted); }
 .tabbar svg { width: 22px; height: 22px; stroke: currentColor; }
 .tabbar button[aria-current="page"] { color: var(--accent); background: var(--surface2); }
 svg.ico { fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -159,3 +159,14 @@ svg.ico { fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin:
 
 /* Frame numbers along the top, like the edge print on a strip of negatives. */
 .edge { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.18em; color: var(--edge); opacity: 0.85; margin-bottom: 10px; }
+
+/* Compare: one row per lens, a small picture beside the verdict. */
+.cmp-list { display: flex; flex-direction: column; gap: 8px; }
+.cmp-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: center; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; }
+.cmp-text { display: flex; flex-direction: column; gap: 6px; font-size: 0.86rem; min-width: 0; }
+.cmp-text .row { justify-content: flex-start; flex-wrap: wrap; gap: 6px; }
+.cmp-row.wide { grid-template-columns: minmax(0, 1fr); }
+.mini { aspect-ratio: 3 / 2; border-radius: 2px; overflow: hidden; background: #1b2433; }
+.mini svg { display: block; width: 100%; height: 100%; }
+.badge { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 2px; padding: 1px 6px; }
+h2 + .seg, .view > h2 { margin-top: 4px; }

@@ -3,12 +3,13 @@
 import { loadCatalog } from "./catalog.js";
 import { $, $$, esc, icon, store } from "./dom.js";
 import { resolveKit } from "./kit.js";
+import { compareView } from "./views/compare.js";
 import { exposureView } from "./views/exposure.js";
 import { lensView } from "./views/lens.js";
 import { scenesView } from "./views/scenes.js";
 import { timerView } from "./views/timer.js";
 
-const VIEWS = [scenesView, lensView, exposureView, timerView];
+const VIEWS = [scenesView, lensView, compareView, exposureView, timerView];
 
 function buildShell(context) {
   const main = $("#views");

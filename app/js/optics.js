@@ -133,3 +133,53 @@ export function mountFit(camera, lens, adapters = []) {
   );
   return adapter ? { fit: "adapter", adapter, cropped } : { fit: "none", cropped };
 }
+
+/**
+ * How much of the frame a subject fills at a distance: the larger of its
+ * height share and width share (landscape orientation). 1 means it just fits.
+ */
+export function frameFill(subject, distanceM, focalMm, sensor) {
+  const sceneH = (distanceM * sensor.heightMm) / focalMm;
+  const sceneW = (distanceM * sensor.widthMm) / focalMm;
+  return Math.max(subject.heightM / sceneH, subject.widthM / sceneW);
+}
+
+/** Megapixels left after cropping until the subject fills `target` of the frame. */
+export function cropMegapixels(megapixels, fill, target = 0.6) {
+  return fill >= target ? megapixels : megapixels * (fill / target) ** 2;
+}
+
+/** Longest side, in centimetres, of a sharp 300 dpi print from that many megapixels. */
+export function printSizeCm(megapixels, aspect = 1.5) {
+  const longSidePx = Math.sqrt(megapixels * 1e6 * aspect);
+  return (longSidePx / 300) * 2.54;
+}
+
+/**
+ * Background blur for a subject framed to fill `fill` of the frame height.
+ * Returns where to stand and the blur circle of a background point
+ * `behindM` metres behind the subject (Infinity for far away), as a share of
+ * the frame width. Thin-lens model: with magnification m and the subject in
+ * focus, the blur circle on the sensor is f·m·D / (N·(s + D)).
+ */
+export function backgroundBlur({ focalMm, fNumber, subjectHeightM, fill, sensor, behindM }) {
+  const m = (fill * sensor.heightMm) / (subjectHeightM * 1000);
+  const s = focalMm * (1 + 1 / m);                      // subject distance, mm
+  const share = Number.isFinite(behindM) ? (behindM * 1000) / (s + behindM * 1000) : 1;
+  const blurMm = ((focalMm * m) / fNumber) * share;
+  return { distanceM: s / 1000, blur: blurMm / sensor.widthMm };
+}
+
+/**
+ * The focal length and aperture on a lens that give the most background blur
+ * for a framing, trying every whole millimetre at the widest aperture there.
+ */
+export function blurriestSetting(lens, framing) {
+  let best = null;
+  for (let f = lens.focalMm.min; f <= lens.focalMm.max; f++) {
+    const fNumber = widestAperture(lens, f);
+    const r = backgroundBlur({ ...framing, focalMm: f, fNumber });
+    if (!best || r.blur > best.blur + EPS) best = { focalMm: f, fNumber, ...r };
+  }
+  return best;
+}
