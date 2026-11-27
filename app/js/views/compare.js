@@ -1,41 +1,40 @@
-// Compare view: your lenses side by side. How big a subject comes out at a
-// distance (and how far you can crop), and which lens blurs the background
-// most for the same framing.
+// Compare view: one live scene. Pick a subject and a lens, then move the zoom,
+// aperture, your distance and the background's distance. The picture is
+// drawn to true scale from the same optics as the numbers: how big the
+// subject comes out, how large the background looms (compression) and how
+// blurred it is. Notes appear as you cross the points that matter, and a
+// strip compares every lens in the kit for the same spot.
 
 import { $, $$, esc, lensClass, lensLabel, store } from "../dom.js";
-import { backgroundBlur, blurriestSetting, cropMegapixels, frameFill, printSizeCm } from "../optics.js";
+import {
+  F_STOPS, backgroundScale, blurCircle, cropMegapixels, equivalentFocal, frameFill, printSizeCm, widestAperture,
+} from "../optics.js";
 
 // Rough real-world sizes, in metres.
 const SUBJECTS = [
-  { id: "person", label: "Person", heightM: 1.75, widthM: 0.5 },
-  { id: "child", label: "Child", heightM: 1.1, widthM: 0.35 },
-  { id: "dog", label: "Dog", heightM: 0.6, widthM: 0.9 },
-  { id: "bird", label: "Bird", heightM: 0.2, widthM: 0.25 },
-  { id: "car", label: "Car", heightM: 1.5, widthM: 4.5 },
-  { id: "house", label: "House", heightM: 8, widthM: 10 },
+  { id: "person", label: "Person", noun: "person", heightM: 1.75, widthM: 0.5 },
+  { id: "child", label: "Child", noun: "child", heightM: 1.1, widthM: 0.35 },
+  { id: "dog", label: "Dog", noun: "dog", heightM: 0.6, widthM: 0.9 },
+  { id: "bird", label: "Bird", noun: "bird", heightM: 0.2, widthM: 0.25 },
+  { id: "car", label: "Car", noun: "car", heightM: 1.5, widthM: 4.5 },
+  { id: "house", label: "House", noun: "house", heightM: 8, widthM: 10 },
 ];
 
-// Distances on the slider, metres.
-const DISTANCES = [2, 3, 5, 7, 10, 15, 20, 30, 40, 50, 75, 100, 150, 200, 300];
-
-// subjectHeightM is the part of the subject that fills `fill` of the frame
-// height; tighter framings crop the drawing from the top down.
-const FRAMINGS = [
-  { id: "head", label: "Head and shoulders", subjectHeightM: 0.5, fill: 0.9, draw: "person" },
-  { id: "half", label: "Half body", subjectHeightM: 0.9, fill: 0.9, draw: "person" },
-  { id: "full", label: "Full body", subjectHeightM: 1.75, fill: 0.85, draw: "person" },
-  { id: "child", label: "Child", subjectHeightM: 1.1, fill: 0.85, draw: "child" },
-  { id: "dog", label: "Dog", subjectHeightM: 0.6, fill: 0.8, draw: "dog" },
-];
+// Your distance from the subject, metres.
+const DISTANCES = [0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 7, 10, 15, 20, 30, 50, 75, 100, 150, 200, 300];
 
 const BACKGROUNDS = [
-  { id: "2", label: "2 m behind", behindM: 2 },
-  { id: "10", label: "10 m behind", behindM: 10 },
-  { id: "far", label: "Far away", behindM: Infinity },
+  { id: "1", label: "1 m", behindM: 1 },
+  { id: "3", label: "3 m", behindM: 3 },
+  { id: "10", label: "10 m", behindM: 10 },
+  { id: "30", label: "30 m", behindM: 30 },
+  { id: "far", label: "Far", behindM: Infinity },
 ];
 
 const CROP_TARGET = 0.6;   // crop until the subject fills 60% of the frame
 const MIN_USEFUL_MP = 2;   // below this a crop is too soft to use
+const W = 150;             // picture size in SVG units (3:2)
+const H = 100;
 
 // Subjects drawn in the same flat style as the Lenses and Exposure pictures.
 // Units are centimetres, standing on y = 0 and centred on x = 0, so one
@@ -75,16 +74,6 @@ const DRAW = {
     <rect x="-320" y="-200" width="150" height="130" fill="#9ed0ff"/><rect x="170" y="-200" width="150" height="130" fill="#9ed0ff"/>` },
 };
 
-// The sunny landscape from the Lenses tab, in a 150 x 100 frame. Only the
-// far scenery (sky, sun, hills) is drawn here: it is far enough away that
-// its size barely changes. Anything near the subject would have to scale
-// with it, so a scale bar shows size instead.
-const DAY = `
-  <rect width="150" height="100" fill="#9cc7e6"/><circle cx="124" cy="18" r="7" fill="#f6dc8a"/>
-  <path d="M0 72 L22 52 L40 62 L66 44 L92 64 L116 52 L150 70 V82 H0 Z" fill="#7f9db5"/>
-  <path d="M0 78 L30 68 L58 75 L86 66 L120 76 L150 70 V82 H0 Z" fill="#587f6f"/>
-  <rect y="80" width="150" height="20" fill="#5f8f52"/>`;
-
 const place = (kind, x, groundY, cmToPx) =>
   `<g transform="translate(${x.toFixed(2)} ${groundY.toFixed(2)}) scale(${cmToPx.toFixed(5)})">${DRAW[kind].svg}</g>`;
 
@@ -95,18 +84,12 @@ function scaleBar(pxPerM) {
   const m = BAR_LENGTHS_M.find((l) => l * pxPerM >= 18) ?? BAR_LENGTHS_M.at(-1);
   const w = m * pxPerM;
   const label = m < 1 ? `${Math.round(m * 100)} cm` : `${m} m`;
-  return `<g transform="translate(6 94)" font-family="ui-monospace, Menlo, monospace" font-size="8">
+  // Bottom-right corner; the settings tag sits bottom-left.
+  const x = 150 - 6 - w - label.length * 4.9 - 3;
+  return `<g transform="translate(${x.toFixed(2)} 94)" font-family="ui-monospace, Menlo, monospace" font-size="8">
     <path d="M0 -4V0H${w.toFixed(2)}V-4" fill="none" stroke="#0c0f14" stroke-width="2.4"/>
     <path d="M0 -4V0H${w.toFixed(2)}V-4" fill="none" stroke="#ffffff" stroke-width="1"/>
     <text x="${(w + 3).toFixed(2)}" y="0" fill="#ffffff" stroke="#0c0f14" stroke-width="1.6" paint-order="stroke">${label}</text></g>`;
-}
-
-/** Subject drawn at its true size in a 150 x 100 landscape frame. */
-function reachPicture(subject, distanceM, focalMm, sensor) {
-  const sceneHm = (distanceM * sensor.heightMm) / focalMm;
-  const pxPerM = 100 / sceneHm;
-  const cmToPx = (pxPerM / 100) * ((subject.heightM * 100) / DRAW[subject.id].h);
-  return `<svg viewBox="0 0 150 100" aria-hidden="true">${DAY}${place(subject.id, 75, 92, cmToPx)}${scaleBar(pxPerM)}</svg>`;
 }
 
 // Backgrounds, in metres from the subject's centre line. Each suits its
@@ -115,7 +98,6 @@ const BUILDINGS = [[14, 24], [18, 38], [12, 18], [20, 44], [16, 30], [22, 52], [
 const BUILDING_FILLS = ["#28344a", "#222c40", "#2b3850", "#232e43"];
 const LIGHT_COLOURS = ["#ffd27a", "#ff9e7a", "#9ed0ff"];
 const FAR_AWAY_M = 300;    // stands in for "far away" when drawing
-let blurIds = 0;
 
 // Deterministic jitter, so pictures don't flicker between renders.
 const jitter = (n) => ((Math.sin(n * 12.9898) * 43758.5453) % 1 + 1) % 1;
@@ -177,56 +159,6 @@ function lightRow(at, heightM, step, offset) {
   return pts;
 }
 
-/**
- * Subject in focus in front of a background D metres behind. The background
- * is drawn at its real size for that distance, so a telephoto (standing
- * farther back) shows it larger behind the subject: compression. It is
- * blurred, and its lights drawn as blur circles, by the amount the lens gives.
- */
-function blurPicture(framing, blur, distanceM, behindM) {
-  const id = `cmpBlur${blurIds++}`;
-  const drawing = DRAW[framing.draw];
-  const realHcm = framing.draw === "person" ? 175 : framing.subjectHeightM * 100;
-  const cmToPx = ((framing.fill * 100) / (framing.subjectHeightM * 100)) * (realHcm / drawing.h);
-  const groundY = 100 - framing.fill * 100 + drawing.h * cmToPx;
-
-  // Things D metres behind look s / (s + D) as big as at the subject.
-  const D = Number.isFinite(behindM) ? behindM : FAR_AWAY_M;
-  const pxPerM = cmToPx * 100 * (distanceM / (distanceM + D));
-  const camHeightM = (groundY - 50) / (cmToPx * 100);    // height of the frame centre
-  const X = (m) => 75 + m * pxPerM;
-  const Y = (m) => 50 - (m - camHeightM) * pxPerM;
-  const at = {
-    pxPerM, left: -80 / pxPerM, right: 80 / pxPerM,
-    rect: (x, y, w, h, fill) => {
-      const x0 = Math.max(-5, X(x)), x1 = Math.min(155, X(x + w));
-      const y0 = Math.max(-5, Y(y + h)), y1 = Math.min(105, Y(y));
-      return x1 > x0 && y1 > y0 ? `<rect x="${x0.toFixed(2)}" y="${y0.toFixed(2)}" width="${(x1 - x0).toFixed(2)}" height="${(y1 - y0).toFixed(2)}" fill="${fill}"/>` : "";
-    },
-    dot: (x, y, r, fill) => {
-      const cx = X(x), cy = Y(y), rr = r * pxPerM;
-      return cx + rr < -5 || cx - rr > 155 || cy + rr < -5 || cy - rr > 105 ? "" : `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${rr.toFixed(2)}" fill="${fill}"/>`;
-    },
-  };
-  const bg = D <= 4 ? hedge(at) : D <= 30 ? park(at) : city(at);
-
-  const d = Math.max(1.2, blur * 150);
-  const opacity = Math.max(0.25, Math.min(0.95, 3 / d));
-  const lights = bg.lights.map(([x, y, c]) => {
-    const cx = X(x), cy = Y(y);
-    return cx < -d || cx > 150 + d || cy < -d || cy > 100 + d ? ""
-      : `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(d / 2).toFixed(2)}" fill="${c}" opacity="${opacity.toFixed(2)}"/>`;
-  }).join("");
-
-  const ground = Y(0);
-  return `<svg viewBox="0 0 150 100" aria-hidden="true">
-    <defs><filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(d / 3).toFixed(2)}"/></filter></defs>
-    <rect width="150" height="100" fill="#141b27"/>
-    <g filter="url(#${id})">${bg.scenery}${ground < 100 ? `<rect y="${ground.toFixed(2)}" width="150" height="${(100 - ground).toFixed(2)}" fill="#2c3340"/>` : ""}</g>${lights}
-    ${place(framing.draw, 75, groundY, cmToPx)}
-  </svg>`;
-}
-
 /** Plain words for a blur circle size (share of the frame width). */
 function blurWords(blur) {
   if (blur >= 0.03) return "Background very soft";
@@ -235,7 +167,132 @@ function blurWords(blur) {
   return "Background nearly sharp";
 }
 
+/**
+ * The whole picture. The camera aims at the subject: centred when it fits,
+ * at its top when it doesn't (so a person close up becomes a portrait).
+ * Subject and background share one scale rule: things D metres behind look
+ * s / (s + D) as big as at the subject.
+ */
+function scenePicture({ subject, focalMm, distanceM, behindM, blur, sensor }) {
+  const sceneHm = (distanceM * sensor.heightMm) / focalMm;
+  const pxPerM = H / sceneHm;
+  const visible = Math.min(subject.heightM, sceneHm);
+  const aimM = subject.heightM - visible / 2;                  // height the frame centre is on
+  const D = Number.isFinite(behindM) ? behindM : FAR_AWAY_M;
+  const bgPxPerM = pxPerM * (distanceM / (distanceM + D));
+  const X = (m) => W / 2 + m * bgPxPerM;
+  const Y = (m) => H / 2 - (m - aimM) * bgPxPerM;
+  const at = {
+    pxPerM: bgPxPerM, left: -(W / 2 + 5) / bgPxPerM, right: (W / 2 + 5) / bgPxPerM,
+    rect: (x, y, w, h, fill) => {
+      const x0 = Math.max(-5, X(x)), x1 = Math.min(W + 5, X(x + w));
+      const y0 = Math.max(-5, Y(y + h)), y1 = Math.min(H + 5, Y(y));
+      return x1 > x0 && y1 > y0 ? `<rect x="${x0.toFixed(2)}" y="${y0.toFixed(2)}" width="${(x1 - x0).toFixed(2)}" height="${(y1 - y0).toFixed(2)}" fill="${fill}"/>` : "";
+    },
+    dot: (x, y, r, fill) => {
+      const cx = X(x), cy = Y(y), rr = r * bgPxPerM;
+      return cx + rr < -5 || cx - rr > W + 5 || cy + rr < -5 || cy - rr > H + 5 ? ""
+        : `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${rr.toFixed(2)}" fill="${fill}"/>`;
+    },
+  };
+  const bg = D <= 4 ? hedge(at) : D <= 40 ? park(at) : city(at);
+
+  const d = Math.max(1.2, blur * W);
+  const opacity = Math.max(0.25, Math.min(0.95, 3 / d));
+  const lights = bg.lights.map(([x, y, c]) => {
+    const cx = X(x), cy = Y(y);
+    return cx < -d || cx > W + d || cy < -d || cy > H + d ? ""
+      : `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(d / 2).toFixed(2)}" fill="${c}" opacity="${opacity.toFixed(2)}"/>`;
+  }).join("");
+  const bgGround = Y(0);
+  const subjGround = H / 2 + aimM * pxPerM;
+  const cmToPx = (pxPerM / 100) * ((subject.heightM * 100) / DRAW[subject.id].h);
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs><filter id="cmpBlur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(d / 3).toFixed(2)}"/></filter></defs>
+    <rect width="${W}" height="${H}" fill="#141b27"/>
+    <g filter="url(#cmpBlur)">${bg.scenery}${bgGround < H ? `<rect y="${bgGround.toFixed(2)}" width="${W}" height="${(H - bgGround).toFixed(2)}" fill="#2c3340"/>` : ""}</g>${lights}
+    ${subjGround < H + 400 ? place(subject.id, W / 2, subjGround, cmToPx) : ""}
+    ${scaleBar(pxPerM)}
+  </svg>`;
+}
+
 const fmtM = (m) => (m < 10 ? m.toFixed(1) : Math.round(m)).toString().replace(/\.0$/, "");
+const pct = (x) => `${x < 0.01 ? "under 1" : Math.round(x * 100)}%`;
+
+/** For a person or child, what a framing taller than the frame shows. */
+function crop(subject, sceneHm) {
+  if (!["person", "child"].includes(subject.id) || sceneHm >= subject.heightM) return null;
+  const share = sceneHm / subject.heightM;
+  if (share >= 0.5) return "half body";
+  if (share >= 0.25) return "head and shoulders";
+  return "face only";
+}
+
+/** Everything the screen says about one setup. */
+function analyse({ lens, subject, focalMm, fNumber, distanceM, behindM, camera }) {
+  const sensor = camera.sensor;
+  const sceneHm = (distanceM * sensor.heightMm) / focalMm;
+  const fill = frameFill(subject, distanceM, focalMm, sensor);
+  const blur = blurCircle(focalMm, fNumber, distanceM, behindM, sensor.widthMm);
+  const tooClose = lens.minFocusM && distanceM < lens.minFocusM;
+  const framing = crop(subject, sceneHm);
+  const mp = cropMegapixels(sensor.megapixels, Math.min(fill, 1), CROP_TARGET);
+  return { sceneHm, fill, blur, tooClose, framing, mp };
+}
+
+/** The notes for the points the current setup has crossed, most important first. */
+function notes(a, s, kit) {
+  const out = [];
+  const { subject, lens, focalMm, fNumber, distanceM, behindM } = s;
+  if (a.tooClose) {
+    out.push(["warning", `Too close to focus. The ${esc(lensLabel(lens))} focuses no closer than ${lens.minFocusM} m, so step back.`]);
+  }
+  if (a.framing) {
+    out.push(["tip", a.framing === "face only"
+      ? `Only the face fits. Step back or zoom out for head and shoulders.`
+      : `The ${subject.noun} is cropped to ${a.framing}: a portrait framing, which suits ${subject.id === "child" ? "a child" : "a person"} well.`]);
+  } else if (a.fill > 1) {
+    const backTo = (distanceM * a.fill) / 0.9;
+    out.push(["warning", `The ${subject.noun} doesn't fit. ${focalMm > lens.focalMm.min ? "Zoom out, or step" : "Step"} back to about ${fmtM(backTo)} m.`]);
+  } else if (a.fill < CROP_TARGET) {
+    if (a.mp < MIN_USEFUL_MP) {
+      const longest = Math.max(...kit.lenses.map((l) => l.focalMm.max));
+      out.push(["warning", `Too small to crop into a usable picture (${a.mp.toFixed(1)} MP left).${focalMm < longest ? " A longer lens or getting closer will help." : " Getting closer is the only fix."}`]);
+    } else {
+      out.push(["tip", `The ${subject.noun} fills ${pct(a.fill)} of the frame. Cropping in leaves ${a.mp.toFixed(a.mp < 10 ? 1 : 0)} MP, enough for a sharp print up to ${Math.round(printSizeCm(a.mp))} cm wide.`]);
+    }
+  }
+  const scale = backgroundScale(distanceM, behindM);
+  if (Number.isFinite(behindM) && behindM <= 3 && a.blur < 0.015) {
+    out.push(["tip", `The background is only ${behindM} m behind, so it stays fairly sharp. Moving the ${subject.noun} farther from it helps more than any lens.`]);
+  } else if (Number.isFinite(behindM) && scale >= 0.6) {
+    out.push(["tip", `Compression: from ${fmtM(distanceM)} m away, things ${behindM} m behind look ${Math.round(scale * 100)}% as big as at your ${subject.noun}, so the background looms large and only a small patch of it shows.`]);
+  } else if (Number.isFinite(behindM) && scale <= 0.25) {
+    out.push(["tip", `Wide and close: things ${behindM} m behind shrink to ${Math.round(scale * 100)}% of their size at your ${subject.noun}, so much more of the background fits in.`]);
+  }
+  const widest = widestAperture(lens, focalMm);
+  if (fNumber > widest + 1e-9 && a.blur < 0.03) {
+    out.push(["tip", `Opening up to f/${widest} would blur the background more.`]);
+  } else if (a.blur >= 0.03 && !a.tooClose) {
+    out.push(["tip", `A very soft background: the ${subject.noun} stands out clearly.`]);
+  }
+  return out.slice(0, 3);
+}
+
+/**
+ * Each lens at its best for this spot: zoomed in as far as it can while the
+ * subject still fits (for people, while at least head and shoulders fit),
+ * wide open.
+ */
+function lensAtBest(lens, s, camera) {
+  const portrait = ["person", "child"].includes(s.subject.id);
+  const maxFocal = portrait
+    ? (s.distanceM * camera.sensor.heightMm) / Math.min(s.subject.heightM, 0.55)
+    : (0.95 * lens.focalMm.max) / Math.max(1e-9, frameFill(s.subject, s.distanceM, lens.focalMm.max, camera.sensor));
+  const focalMm = Math.max(lens.focalMm.min, Math.min(lens.focalMm.max, Math.floor(maxFocal)));
+  const fNumber = widestAperture(lens, focalMm);
+  return { lens, focalMm, fNumber, ...analyse({ ...s, lens, focalMm, fNumber, camera }) };
+}
 
 export const compareView = {
   id: "compare",
@@ -244,122 +301,121 @@ export const compareView = {
 
   render(root, { kit }) {
     const camera = kit.camera;
-    const sensor = camera.sensor;
     const lenses = kit.lenses;
-    const state = {
-      subject: store.get("halfpress.cmp.subject") ?? "person",
-      distance: Number(store.get("halfpress.cmp.distance") ?? 7),
-      framing: store.get("halfpress.cmp.framing") ?? "head",
-      background: store.get("halfpress.cmp.background") ?? "far",
+    if (!lenses.length) { root.innerHTML = '<div class="panel"><p>Add a lens to compare.</p></div>'; return; }
+    const s = {
+      subject: SUBJECTS.find((x) => x.id === store.get("halfpress.cmp.subject")) ?? SUBJECTS[0],
+      lens: lenses[Number(store.get("halfpress.cmp.lens")) || 0] ?? lenses[0],
+      distanceM: Number(store.get("halfpress.cmp.distance")) || 3,
+      behindM: BACKGROUNDS.find((b) => b.id === store.get("halfpress.cmp.bg"))?.behindM ?? 10,
+      focalMm: 0,
+      fNumber: 0,
     };
 
-    const seg = (id, items, label) => `<div class="seg" id="${id}" role="group" aria-label="${label}">
-      ${items.map((x) => `<button type="button" data-id="${x.id}" aria-pressed="false">${esc(x.label)}</button>`).join("")}</div>`;
+    const seg = (id, items, label, cls = "") => `<div class="seg ${cls}" id="${id}" role="group" aria-label="${label}">
+      ${items.map((x) => `<button type="button" data-id="${x.id}" ${x.cls ? `class="${x.cls}"` : ""} aria-pressed="false">${esc(x.label)}</button>`).join("")}</div>`;
+    const slider = (id, label) => `<div class="ctl">
+      <div class="row"><label for="${id}">${label}</label><span class="val" id="${id}Val"></span></div>
+      <input type="range" id="${id}" step="1"><span class="effect" id="${id}Note"></span></div>`;
 
     root.innerHTML = `
       <div class="head">
         <span class="eyebrow">Your lenses side by side</span>
         <h1>Which lens for this?</h1>
       </div>
-
-      <h2>How big will it be?</h2>
       ${seg("cmpSubject", SUBJECTS, "Subject")}
-      <div class="ctl">
-        <div class="row"><label for="cmpDist">Distance</label><span class="val" id="cmpDistVal"></span></div>
-        <input type="range" id="cmpDist" min="0" max="${DISTANCES.length - 1}" step="1">
-      </div>
-      <div class="cmp-list" id="cmpReach"></div>
+      ${seg("cmpLens", lenses.map((l, i) => ({ id: String(i), label: lensLabel(l), cls: lensClass(kit, l) })), "Lens", "lens")}
+      <div class="frame" id="cmpFrame"></div>
+      <div class="tiles" id="cmpTiles"></div>
+      <div id="cmpNotes" aria-live="polite"></div>
+      ${slider("cmpDist", "Your distance")}
+      ${slider("cmpZoom", "Zoom")}
+      ${slider("cmpAp", "Aperture")}
+      <div class="ctl"><div class="row"><label id="cmpBgLabel">Background behind the ${esc(s.subject.noun)}</label></div>
+        ${seg("cmpBg", BACKGROUNDS, "Background distance")}</div>
+      <h2>All your lenses, same spot</h2>
+      <div class="cmp-strip" id="cmpStrip"></div>
+      <p class="muted">Each lens zoomed as far as it can while the subject still fits, wide open. Tap one to try it.</p>`;
 
-      <h2>Background blur</h2>
-      ${seg("cmpFraming", FRAMINGS, "Framing")}
-      ${seg("cmpBg", BACKGROUNDS, "Background")}
-      <div class="cmp-list" id="cmpBlur"></div>
-      <p class="muted" id="cmpBlurNote"></p>`;
+    const dist = $("#cmpDist", root), zoom = $("#cmpZoom", root), ap = $("#cmpAp", root);
+    dist.min = 0; dist.max = DISTANCES.length - 1;
+    let apertures = [];
 
-    const slider = $("#cmpDist", root);
-    const nearest = DISTANCES.reduce((best, d, i) => (Math.abs(d - state.distance) < Math.abs(DISTANCES[best] - state.distance) ? i : best), 0);
-    slider.value = nearest;
+    const press = (group, id) => $$(`#${group} button`, root).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === id)));
 
-    const press = (groupId, id) =>
-      $$(`#${groupId} button`, root).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === id)));
-
-    const renderReach = () => {
-      const subject = SUBJECTS.find((s) => s.id === state.subject) ?? SUBJECTS[0];
-      const d = DISTANCES[Number(slider.value)];
-      state.distance = d;
-      $("#cmpDistVal", root).textContent = `${d} m`;
-      press("cmpSubject", subject.id);
-
-      const rows = lenses.map((lens) => {
-        const fillAtLong = frameFill(subject, d, lens.focalMm.max, sensor);
-        let focal = lens.focalMm.max;
-        if (fillAtLong > 0.9) focal = Math.max(lens.focalMm.min, Math.floor((lens.focalMm.max * 0.85) / fillAtLong));
-        const fill = frameFill(subject, d, focal, sensor);
-        let verdict;
-        let fits = true;
-        if (fill > 1) {
-          fits = false;
-          verdict = `Too close to fit, even at ${focal} mm. Step back to about ${fmtM((d * fill) / 0.9)} m.`;
-        } else if (fill >= CROP_TARGET) {
-          verdict = `Fills ${Math.round(fill * 100)}% of the frame. No crop needed.`;
-        } else {
-          const mp = cropMegapixels(camera.sensor.megapixels, fill, CROP_TARGET);
-          verdict = mp < MIN_USEFUL_MP
-            ? `Fills ${fill < 0.01 ? "under 1" : Math.round(fill * 100)}% of the frame. Too small to crop into a usable picture.`
-            : `Fills ${Math.round(fill * 100)}% of the frame. Cropped in, ${mp.toFixed(mp < 10 ? 1 : 0)} MP left: sharp prints up to ${Math.round(printSizeCm(mp))} cm wide.`;
-        }
-        return { lens, focal, fill, fits, verdict };
-      });
-      const best = rows.filter((r) => r.fits).sort((a, b) => b.fill - a.fill)[0];
-      $("#cmpReach", root).innerHTML = rows.map((r) => `
-        <div class="cmp-row">
-          <div class="mini">${reachPicture(subject, d, r.focal, sensor)}</div>
-          <div class="cmp-text">
-            <div class="row"><span class="chip ${lensClass(kit, r.lens)}">${esc(lensLabel(r.lens))}</span>${r === best ? '<span class="badge">Fills most</span>' : ""}</div>
-            <p><b>At ${r.focal} mm.</b> ${esc(r.verdict)}</p>
-          </div>
-        </div>`).join("");
-      store.set("halfpress.cmp.subject", subject.id);
-      store.set("halfpress.cmp.distance", String(d));
+    const setAperture = (n) => {
+      apertures = F_STOPS.filter((f) => f >= widestAperture(s.lens, s.focalMm) - 1e-9 && f <= (s.lens.minAperture ?? 22) + 1e-9);
+      const i = apertures.findIndex((f) => f >= n - 1e-9);
+      ap.min = 0; ap.max = apertures.length - 1; ap.value = i < 0 ? apertures.length - 1 : i;
+      s.fNumber = apertures[Number(ap.value)];
     };
 
-    const renderBlur = () => {
-      const framing = FRAMINGS.find((f) => f.id === state.framing) ?? FRAMINGS[0];
-      const bg = BACKGROUNDS.find((b) => b.id === state.background) ?? BACKGROUNDS[2];
-      press("cmpFraming", framing.id);
-      press("cmpBg", bg.id);
-
-      const rows = lenses.map((lens) => {
-        const setting = blurriestSetting(lens, { subjectHeightM: framing.subjectHeightM, fill: framing.fill, sensor, behindM: bg.behindM });
-        const tooClose = lens.minFocusM && setting.distanceM < lens.minFocusM;
-        return { lens, ...setting, tooClose };
-      });
-      const usable = rows.filter((r) => !r.tooClose);
-      const best = usable.sort((a, b) => b.blur - a.blur)[0];
-      const ranked = [...rows].sort((a, b) => b.blur - a.blur);
-      $("#cmpBlur", root).innerHTML = ranked.map((r) => `
-        <div class="cmp-row wide">
-          <div class="mini">${blurPicture(framing, r.blur, r.distanceM, bg.behindM)}</div>
-          <div class="cmp-text">
-            <div class="row"><span class="chip ${lensClass(kit, r.lens)}">${esc(lensLabel(r.lens))}</span>${r === best ? '<span class="badge">Most blur</span>' : ""}</div>
-            <p><b>${r.tooClose ? "Too close to focus" : blurWords(r.blur)}.</b> ${r.focalMm} mm at f/${r.fNumber}, standing ${fmtM(r.distanceM)} m away. ${r.tooClose
-              ? `This lens focuses no closer than ${r.lens.minFocusM} m.`
-              : `Lights become circles ${(r.blur * 100).toFixed(1)}% of the frame wide.`}</p>
-          </div>
-        </div>`).join("");
-      $("#cmpBlurNote", root).textContent = Number.isFinite(bg.behindM)
-        ? "With the background close behind, every lens leaves it fairly sharp. The biggest gain is moving your subject away from it. Among lenses, the one you stand nearest with tends to win: from farther back, the background is relatively closer to your subject."
-        : "With a far background, blur for the same framing comes down to focal length divided by f-number. That is why a long zoom can rival a fast prime.";
-      store.set("halfpress.cmp.framing", framing.id);
-      store.set("halfpress.cmp.background", bg.id);
+    const selectLens = (i, focalMm) => {
+      s.lens = lenses[i];
+      zoom.min = s.lens.focalMm.min; zoom.max = s.lens.focalMm.max;
+      zoom.disabled = s.lens.focalMm.min === s.lens.focalMm.max;
+      s.focalMm = Math.min(s.lens.focalMm.max, Math.max(s.lens.focalMm.min, focalMm ?? s.lens.focalMm.max));
+      zoom.value = s.focalMm;
+      setAperture(0);
+      press("cmpLens", String(i));
+      store.set("halfpress.cmp.lens", String(i));
     };
 
-    $$("#cmpSubject button", root).forEach((b) => b.addEventListener("click", () => { state.subject = b.dataset.id; renderReach(); }));
-    $$("#cmpFraming button", root).forEach((b) => b.addEventListener("click", () => { state.framing = b.dataset.id; renderBlur(); }));
-    $$("#cmpBg button", root).forEach((b) => b.addEventListener("click", () => { state.background = b.dataset.id; renderBlur(); }));
-    slider.addEventListener("input", renderReach);
+    const update = () => {
+      const a = analyse({ ...s, camera });
+      $("#cmpFrame", root).innerHTML = scenePicture({ ...s, blur: a.blur, sensor: camera.sensor })
+        + `<span class="tag">${s.focalMm} mm f/${s.fNumber} · ${fmtM(s.distanceM)} m away</span>`;
+      const tile = (k, v) => `<div class="tile"><div class="k">${k}</div><div class="v small">${v}</div></div>`;
+      $("#cmpTiles", root).innerHTML =
+        tile("Subject fills", a.framing ? `Cropped: ${a.framing}` : a.fill > 1 ? "Doesn't fit" : pct(a.fill)) +
+        tile("After a crop", a.framing || a.fill >= CROP_TARGET ? "No crop needed" : a.fill > 1 ? "Doesn't fit" : `${a.mp.toFixed(a.mp < 10 ? 1 : 0)} MP`) +
+        tile("Background", a.tooClose ? "Out of focus range" : blurWords(a.blur).replace("Background ", "")) +
+        tile("Full-frame look", `${equivalentFocal(s.focalMm, camera.cropFactor)} mm`);
+      $("#cmpNotes", root).innerHTML = notes(a, s, kit).map(([cls, text]) => `<p class="${cls}">${text}</p>`).join("");
 
-    renderReach();
-    renderBlur();
+      $("#cmpDistVal", root).textContent = `${fmtM(s.distanceM)} m`;
+      $("#cmpZoomVal", root).textContent = `${s.focalMm} mm`;
+      $("#cmpZoomNote", root).textContent = zoom.disabled ? "Fixed lens. Move closer or farther to change the framing." : "";
+      $("#cmpApVal", root).textContent = `f/${s.fNumber}`;
+      $("#cmpApNote", root).textContent = s.fNumber <= widestAperture(s.lens, s.focalMm) + 1e-9 ? "Wide open: the most blur this lens gives here." : "";
+      $("#cmpBgLabel", root).textContent = `Background behind the ${s.subject.noun}`;
+
+      const best = lenses.map((l) => lensAtBest(l, s, camera));
+      const usable = best.filter((b) => !b.tooClose && (b.framing || b.fill <= 1.0001));
+      const mostBlur = usable.reduce((m, b) => (!m || b.blur > m.blur ? b : m), null);
+      // Reach: the tightest framing that still works (for people, at least head and shoulders).
+      const reachable = usable.filter((b) => b.framing !== "face only");
+      const mostReach = reachable.reduce((m, b) => (!m || b.fill > m.fill ? b : m), null);
+      $("#cmpStrip", root).innerHTML = best.map((b, i) => `
+        <button type="button" class="cmp-pick" data-i="${i}" data-f="${b.focalMm}" aria-pressed="${b.lens === s.lens}">
+          <span class="chip ${lensClass(kit, b.lens)}">${esc(lensLabel(b.lens))}</span>
+          <span class="cmp-pick-k">${b.focalMm} mm f/${b.fNumber}</span>
+          <span>${b.tooClose ? "Too close" : b.framing ? `Fills: ${b.framing}` : b.fill > 1 ? "Doesn't fit" : `Fills ${pct(b.fill)}`}</span>
+          <span>${b.tooClose ? "" : blurWords(b.blur).replace("Background ", "Bg ")}</span>
+          ${b === mostReach ? '<span class="badge">Fills most</span>' : ""}${b === mostBlur ? '<span class="badge">Most blur</span>' : ""}
+        </button>`).join("");
+      $$("#cmpStrip .cmp-pick", root).forEach((btn) => btn.addEventListener("click", () => {
+        selectLens(Number(btn.dataset.i), Number(btn.dataset.f));
+        update();
+      }));
+
+      press("cmpSubject", s.subject.id);
+      press("cmpBg", BACKGROUNDS.find((b) => b.behindM === s.behindM)?.id);
+      store.set("halfpress.cmp.subject", s.subject.id);
+      store.set("halfpress.cmp.distance", String(s.distanceM));
+      store.set("halfpress.cmp.bg", BACKGROUNDS.find((b) => b.behindM === s.behindM)?.id ?? "10");
+    };
+
+    const nearest = DISTANCES.reduce((b, d, i) => (Math.abs(d - s.distanceM) < Math.abs(DISTANCES[b] - s.distanceM) ? i : b), 0);
+    dist.value = nearest; s.distanceM = DISTANCES[nearest];
+    selectLens(Math.max(0, lenses.indexOf(s.lens)));
+
+    $$("#cmpSubject button", root).forEach((b) => b.addEventListener("click", () => { s.subject = SUBJECTS.find((x) => x.id === b.dataset.id); update(); }));
+    $$("#cmpLens button", root).forEach((b) => b.addEventListener("click", () => { selectLens(Number(b.dataset.id)); update(); }));
+    $$("#cmpBg button", root).forEach((b) => b.addEventListener("click", () => { s.behindM = BACKGROUNDS.find((x) => x.id === b.dataset.id).behindM; update(); }));
+    dist.addEventListener("input", () => { s.distanceM = DISTANCES[Number(dist.value)]; update(); });
+    zoom.addEventListener("input", () => { s.focalMm = Number(zoom.value); setAperture(s.fNumber); update(); });
+    ap.addEventListener("input", () => { s.fNumber = apertures[Number(ap.value)]; update(); });
+    update();
   },
 };
