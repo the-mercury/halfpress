@@ -31,6 +31,13 @@ const BACKGROUNDS = [
   { id: "far", label: "Far", behindM: Infinity },
 ];
 
+// A half-body portrait with the background well behind: a setup where
+// distance, zoom, aperture and background all visibly change the picture.
+const DEFAULT_DISTANCE_M = 3;
+const DEFAULT_BEHIND_M = 10;
+// Fresh names, so values saved by the earlier Compare screen are ignored.
+const KEY = { subject: "halfpress.compare.subject", lens: "halfpress.compare.lens", distance: "halfpress.compare.distance", bg: "halfpress.compare.bg" };
+
 const CROP_TARGET = 0.6;   // crop until the subject fills 60% of the frame
 const MIN_USEFUL_MP = 2;   // below this a crop is too soft to use
 const W = 150;             // picture size in SVG units (3:2)
@@ -125,7 +132,7 @@ function park(at) {
   for (let k = Math.floor(at.left / 1.1) - 1; k * 1.1 < at.right + 1.1; k++) {
     out += at.dot(k * 1.1 + jitter(k) * 0.3, 0.8 + jitter(k * 7) * 0.25, 0.75, k % 2 ? "#2f5a3e" : "#3a6b48");
   }
-  return { scenery: out, lights: lightRow(at, 2, 1.2, 0.3) };
+  return { scenery: out, lights: [...lightRow(at, 2, 0.6, 0.3), ...lightRow(at, 2.8, 0.9, 0)] };
 }
 
 function city(at) {
@@ -208,7 +215,7 @@ function scenePicture({ subject, focalMm, distanceM, behindM, blur, sensor }) {
   const subjGround = H / 2 + aimM * pxPerM;
   const cmToPx = (pxPerM / 100) * ((subject.heightM * 100) / DRAW[subject.id].h);
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <defs><filter id="cmpBlur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(d / 3).toFixed(2)}"/></filter></defs>
+    <defs><filter id="cmpBlur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(d / 2.2).toFixed(2)}"/></filter></defs>
     <rect width="${W}" height="${H}" fill="#141b27"/>
     <g filter="url(#cmpBlur)">${bg.scenery}${bgGround < H ? `<rect y="${bgGround.toFixed(2)}" width="${W}" height="${(H - bgGround).toFixed(2)}" fill="#2c3340"/>` : ""}</g>${lights}
     ${subjGround < H + 400 ? place(subject.id, W / 2, subjGround, cmToPx) : ""}
@@ -302,12 +309,14 @@ export const compareView = {
   render(root, { kit }) {
     const camera = kit.camera;
     const lenses = kit.lenses;
+    // Start with the fastest lens: wide open, aperture visibly changes the background.
+    const fastest = lenses.reduce((a, l) => (!a || l.maxAperture[0].f < a.maxAperture[0].f ? l : a), null);
     if (!lenses.length) { root.innerHTML = '<div class="panel"><p>Add a lens to compare.</p></div>'; return; }
     const s = {
-      subject: SUBJECTS.find((x) => x.id === store.get("halfpress.cmp.subject")) ?? SUBJECTS[0],
-      lens: lenses[Number(store.get("halfpress.cmp.lens")) || 0] ?? lenses[0],
-      distanceM: Number(store.get("halfpress.cmp.distance")) || 3,
-      behindM: BACKGROUNDS.find((b) => b.id === store.get("halfpress.cmp.bg"))?.behindM ?? 10,
+      subject: SUBJECTS.find((x) => x.id === store.get(KEY.subject)) ?? SUBJECTS[0],
+      lens: (store.get(KEY.lens) !== null && lenses[Number(store.get(KEY.lens))]) || fastest,
+      distanceM: DISTANCES.includes(Number(store.get(KEY.distance))) ? Number(store.get(KEY.distance)) : DEFAULT_DISTANCE_M,
+      behindM: BACKGROUNDS.find((b) => b.id === store.get(KEY.bg))?.behindM ?? DEFAULT_BEHIND_M,
       focalMm: 0,
       fNumber: 0,
     };
@@ -326,13 +335,13 @@ export const compareView = {
       ${seg("cmpSubject", SUBJECTS, "Subject")}
       ${seg("cmpLens", lenses.map((l, i) => ({ id: String(i), label: lensLabel(l), cls: lensClass(kit, l) })), "Lens", "lens")}
       <div class="frame" id="cmpFrame"></div>
-      <div class="tiles" id="cmpTiles"></div>
-      <div id="cmpNotes" aria-live="polite"></div>
       ${slider("cmpDist", "Your distance")}
       ${slider("cmpZoom", "Zoom")}
       ${slider("cmpAp", "Aperture")}
       <div class="ctl"><div class="row"><label id="cmpBgLabel">Background behind the ${esc(s.subject.noun)}</label></div>
         ${seg("cmpBg", BACKGROUNDS, "Background distance")}</div>
+      <div class="tiles" id="cmpTiles"></div>
+      <div id="cmpNotes" aria-live="polite"></div>
       <h2>All your lenses, same spot</h2>
       <div class="cmp-strip" id="cmpStrip"></div>
       <p class="muted">Each lens zoomed as far as it can while the subject still fits, wide open. Tap one to try it.</p>`;
@@ -358,7 +367,7 @@ export const compareView = {
       zoom.value = s.focalMm;
       setAperture(0);
       press("cmpLens", String(i));
-      store.set("halfpress.cmp.lens", String(i));
+      store.set(KEY.lens, String(i));
     };
 
     const update = () => {
@@ -377,7 +386,8 @@ export const compareView = {
       $("#cmpZoomVal", root).textContent = `${s.focalMm} mm`;
       $("#cmpZoomNote", root).textContent = zoom.disabled ? "Fixed lens. Move closer or farther to change the framing." : "";
       $("#cmpApVal", root).textContent = `f/${s.fNumber}`;
-      $("#cmpApNote", root).textContent = s.fNumber <= widestAperture(s.lens, s.focalMm) + 1e-9 ? "Wide open: the most blur this lens gives here." : "";
+      const open = s.fNumber <= widestAperture(s.lens, s.focalMm) + 1e-9;
+      $("#cmpApNote", root).textContent = `${blurWords(a.blur)} at f/${s.fNumber}.${open ? " Wide open: the most blur this lens gives here." : " Slide left to open up and soften it."}`;
       $("#cmpBgLabel", root).textContent = `Background behind the ${s.subject.noun}`;
 
       const best = lenses.map((l) => lensAtBest(l, s, camera));
@@ -401,9 +411,9 @@ export const compareView = {
 
       press("cmpSubject", s.subject.id);
       press("cmpBg", BACKGROUNDS.find((b) => b.behindM === s.behindM)?.id);
-      store.set("halfpress.cmp.subject", s.subject.id);
-      store.set("halfpress.cmp.distance", String(s.distanceM));
-      store.set("halfpress.cmp.bg", BACKGROUNDS.find((b) => b.behindM === s.behindM)?.id ?? "10");
+      store.set(KEY.subject, s.subject.id);
+      store.set(KEY.distance, String(s.distanceM));
+      store.set(KEY.bg, BACKGROUNDS.find((b) => b.behindM === s.behindM)?.id ?? "10");
     };
 
     const nearest = DISTANCES.reduce((b, d, i) => (Math.abs(d - s.distanceM) < Math.abs(DISTANCES[b] - s.distanceM) ? i : b), 0);
