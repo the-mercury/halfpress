@@ -156,30 +156,19 @@ export function printSizeCm(megapixels, aspect = 1.5) {
 }
 
 /**
- * Background blur for a subject framed to fill `fill` of the frame height.
- * Returns where to stand and the blur circle of a background point
- * `behindM` metres behind the subject (Infinity for far away), as a share of
- * the frame width. Thin-lens model: with magnification m and the subject in
- * focus, the blur circle on the sensor is f·m·D / (N·(s + D)).
+ * Blur circle of a background point `behindM` metres behind a subject in
+ * focus at `distanceM`, as a share of the frame width. Thin-lens model: with
+ * magnification m = f / (s - f), the circle on the sensor is
+ * f·m·D / (N·(s + D)); a far background (Infinity) gives f·m / N.
  */
-export function backgroundBlur({ focalMm, fNumber, subjectHeightM, fill, sensor, behindM }) {
-  const m = (fill * sensor.heightMm) / (subjectHeightM * 1000);
-  const s = focalMm * (1 + 1 / m);                      // subject distance, mm
+export function blurCircle(focalMm, fNumber, distanceM, behindM, sensorWidthMm) {
+  const s = distanceM * 1000;
+  const m = focalMm / (s - focalMm);
   const share = Number.isFinite(behindM) ? (behindM * 1000) / (s + behindM * 1000) : 1;
-  const blurMm = ((focalMm * m) / fNumber) * share;
-  return { distanceM: s / 1000, blur: blurMm / sensor.widthMm };
+  return ((focalMm * m) / fNumber) * share / sensorWidthMm;
 }
 
-/**
- * The focal length and aperture on a lens that give the most background blur
- * for a framing, trying every whole millimetre at the widest aperture there.
- */
-export function blurriestSetting(lens, framing) {
-  let best = null;
-  for (let f = lens.focalMm.min; f <= lens.focalMm.max; f++) {
-    const fNumber = widestAperture(lens, f);
-    const r = backgroundBlur({ ...framing, focalMm: f, fNumber });
-    if (!best || r.blur > best.blur + EPS) best = { focalMm: f, fNumber, ...r };
-  }
-  return best;
+/** How large things `behindM` behind the subject look, relative to their size at the subject. */
+export function backgroundScale(distanceM, behindM) {
+  return Number.isFinite(behindM) ? distanceM / (distanceM + behindM) : 0;
 }
