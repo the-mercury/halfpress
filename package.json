@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test \"app/tests/*.test.mjs\"",
-    "serve": "python3 -m http.server 8000 --directory app"
+    "serve": "python3 -m http.server 8000 --directory app",
+    "test:ui": "node tests/ui/contrast.mjs"
   }
 }
