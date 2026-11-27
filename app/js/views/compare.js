@@ -8,6 +8,7 @@ import { backgroundBlur, blurriestSetting, cropMegapixels, frameFill, printSizeC
 // Rough real-world sizes, in metres.
 const SUBJECTS = [
   { id: "person", label: "Person", heightM: 1.75, widthM: 0.5 },
+  { id: "child", label: "Child", heightM: 1.1, widthM: 0.35 },
   { id: "dog", label: "Dog", heightM: 0.6, widthM: 0.9 },
   { id: "bird", label: "Bird", heightM: 0.2, widthM: 0.25 },
   { id: "car", label: "Car", heightM: 1.5, widthM: 4.5 },
@@ -17,11 +18,14 @@ const SUBJECTS = [
 // Distances on the slider, metres.
 const DISTANCES = [2, 3, 5, 7, 10, 15, 20, 30, 40, 50, 75, 100, 150, 200, 300];
 
+// subjectHeightM is the part of the subject that fills `fill` of the frame
+// height; tighter framings crop the drawing from the top down.
 const FRAMINGS = [
-  { id: "head", label: "Head and shoulders", subjectHeightM: 0.5, fill: 0.9, shape: "person", top: 0.32 },
-  { id: "half", label: "Half body", subjectHeightM: 0.9, fill: 0.9, shape: "person", top: 0.55 },
-  { id: "full", label: "Full body", subjectHeightM: 1.8, fill: 0.85, shape: "person", top: 1 },
-  { id: "dog", label: "Dog", subjectHeightM: 0.6, fill: 0.8, shape: "dog", top: 1, aspect: 1.5 },
+  { id: "head", label: "Head and shoulders", subjectHeightM: 0.5, fill: 0.9, draw: "person" },
+  { id: "half", label: "Half body", subjectHeightM: 0.9, fill: 0.9, draw: "person" },
+  { id: "full", label: "Full body", subjectHeightM: 1.75, fill: 0.85, draw: "person" },
+  { id: "child", label: "Child", subjectHeightM: 1.1, fill: 0.85, draw: "child" },
+  { id: "dog", label: "Dog", subjectHeightM: 0.6, fill: 0.8, draw: "dog" },
 ];
 
 const BACKGROUNDS = [
@@ -33,48 +37,94 @@ const BACKGROUNDS = [
 const CROP_TARGET = 0.6;   // crop until the subject fills 60% of the frame
 const MIN_USEFUL_MP = 2;   // below this a crop is too soft to use
 
-// Simple silhouettes in a 100 x 100 box, stretched to the subject's shape.
-const SHAPES = {
-  person: '<circle cx="50" cy="11" r="10"/><path d="M28 26h44l6 40h-12l-2 34H36l-2-34H22z"/>',
-  dog: '<ellipse cx="44" cy="50" rx="32" ry="15"/><path d="M62 42L72 22l14 6-8 22z"/><circle cx="82" cy="24" r="12"/><path d="M76 16l2-14 9 11z"/><path d="M90 24l10 4-3 6-8-1z"/><rect x="18" y="56" width="7" height="44" rx="3"/><rect x="30" y="58" width="7" height="42" rx="3"/><rect x="56" y="58" width="7" height="42" rx="3"/><rect x="67" y="56" width="7" height="44" rx="3"/><path d="M14 46C6 42 4 32 8 24" fill="none" stroke-width="5" stroke-linecap="round"/>',
-  bird: '<path d="M10 55c10-25 40-35 62-28l18-10-4 16c10 14 4 34-18 40l-8 22h-6l4-20c-24 2-44-4-48-20z"/>',
-  car: '<path d="M4 62l10-28c2-6 8-10 14-10h40c6 0 12 4 16 10l12 18c4 2 4 6 4 10v18H4z"/><circle cx="24" cy="86" r="12" fill="#1b2433"/><circle cx="78" cy="86" r="12" fill="#1b2433"/>',
-  house: '<path d="M6 46L50 6l44 40v54H6z"/>',
+// Subjects drawn in the same flat style as the Lenses and Exposure pictures.
+// Units are centimetres, standing on y = 0 and centred on x = 0, so one
+// scale factor puts them at their true size in any frame.
+const DRAW = {
+  person: { h: 175, svg: `
+    <rect x="-12" y="-88" width="10" height="88" rx="3" fill="#2b3a55"/><rect x="2" y="-88" width="10" height="88" rx="3" fill="#2b3a55"/>
+    <rect x="-27" y="-142" width="9" height="52" rx="4.5" fill="#c94a46"/><rect x="18" y="-142" width="9" height="52" rx="4.5" fill="#c94a46"/>
+    <rect x="-20" y="-146" width="40" height="64" rx="10" fill="#d9534f"/>
+    <rect x="-5" y="-152" width="10" height="8" fill="#e6b994"/><circle cy="-161" r="13" fill="#f0c9a4"/>
+    <path d="M-13 -162a13 13 0 0 1 26 0c-6-5-20-5-26 0z" fill="#4a3426"/>` },
+  child: { h: 110, svg: `
+    <rect x="-8" y="-50" width="7" height="50" rx="3" fill="#3f66a8"/><rect x="1" y="-50" width="7" height="50" rx="3" fill="#3f66a8"/>
+    <rect x="-18" y="-86" width="7" height="32" rx="3.5" fill="#e3a64a"/><rect x="11" y="-86" width="7" height="32" rx="3.5" fill="#e3a64a"/>
+    <rect x="-13" y="-88" width="26" height="42" rx="8" fill="#f2b84f"/>
+    <circle cy="-98" r="12" fill="#f0c9a4"/><path d="M-12 -99a12 12 0 0 1 24 0c-5-6-19-6-24 0z" fill="#6b4a2e"/>` },
+  dog: { h: 62, svg: `
+    <g stroke="#f1e2c4" stroke-width="6" stroke-linecap="round" fill="none">
+      <path d="M-20 -14 L-32 0"/><path d="M-12 -14 L-6 0"/><path d="M16 -14 L10 0"/><path d="M24 -14 L36 0"/><path d="M-27 -28 L-42 -40"/></g>
+    <rect x="-28" y="-36" width="56" height="24" rx="12" fill="#f1e2c4"/><circle cx="34" cy="-42" r="11" fill="#f1e2c4"/>
+    <rect x="38" y="-42" width="16" height="8" rx="4" fill="#f1e2c4"/><path d="M27 -50 L24 -62 L36 -52 Z" fill="#d9c49c"/>
+    <circle cx="37" cy="-45" r="1.6" fill="#1b2433"/>` },
+  bird: { h: 20, svg: `
+    <path d="M-12 -9 L-20 -13 L-18 -6 Z" fill="#4a3a2e"/><ellipse cx="-2" cy="-9" rx="11" ry="7" fill="#5a4636"/>
+    <ellipse cx="1" cy="-7" rx="7" ry="5" fill="#d9783a"/><circle cx="8" cy="-15" r="5" fill="#5a4636"/>
+    <path d="M12 -16 L17 -14.5 L12 -13 Z" fill="#e3a64a"/><circle cx="9.5" cy="-16" r="0.9" fill="#111"/>
+    <path d="M-3 -2 V0 M2 -2 V0" stroke="#4a3a2e" stroke-width="1.2"/>` },
+  car: { h: 150, svg: `
+    <path d="M-130 -100 L-90 -148 H70 L120 -100 Z" fill="#c0392b"/><path d="M-112 -102 L-82 -138 H-8 V-102 Z M6 -102 V-138 H64 L100 -102 Z" fill="#9ed0ff"/>
+    <rect x="-225" y="-108" width="450" height="76" rx="22" fill="#d9534f"/><rect x="190" y="-92" width="26" height="12" rx="4" fill="#ffd27a"/>
+    <circle cx="-140" cy="-33" r="33" fill="#1f252f"/><circle cx="140" cy="-33" r="33" fill="#1f252f"/>
+    <circle cx="-140" cy="-33" r="13" fill="#8a96a8"/><circle cx="140" cy="-33" r="13" fill="#8a96a8"/>` },
+  house: { h: 800, svg: `
+    <rect x="-400" y="-500" width="800" height="500" fill="#e8dcc4"/><path d="M-470 -490 L0 -800 L470 -490 Z" fill="#b5543c"/>
+    <rect x="-70" y="-230" width="140" height="230" fill="#6b4f3a"/>
+    <rect x="-320" y="-400" width="150" height="130" fill="#9ed0ff"/><rect x="170" y="-400" width="150" height="130" fill="#9ed0ff"/>
+    <rect x="-320" y="-200" width="150" height="130" fill="#9ed0ff"/><rect x="170" y="-200" width="150" height="130" fill="#9ed0ff"/>` },
 };
 
-// Background lights for the blur pictures, as x, y in a 150 x 100 frame.
-const LIGHTS = [[12, 18], [34, 30], [58, 12], [80, 26], [104, 16], [128, 30], [142, 10],
-  [20, 52], [46, 44], [112, 48], [136, 60], [8, 80], [30, 70], [122, 82], [144, 88]];
+// The sunny landscape from the Lenses tab, in a 150 x 100 frame.
+const DAY = `
+  <rect width="150" height="100" fill="#9cc7e6"/><circle cx="124" cy="18" r="7" fill="#f6dc8a"/>
+  <path d="M0 72 L22 52 L40 62 L66 44 L92 64 L116 52 L150 70 V82 H0 Z" fill="#7f9db5"/>
+  <path d="M0 78 L30 68 L58 75 L86 66 L120 76 L150 70 V82 H0 Z" fill="#587f6f"/>
+  <rect y="80" width="150" height="20" fill="#5f8f52"/>
+  <rect x="18" y="70" width="2" height="11" fill="#5a4630"/><circle cx="19" cy="66" r="6" fill="#3f6f45"/>`;
 
-// `top` keeps only the top share of a shape, for tighter framings.
-function silhouette(shape, x, y, w, h, fill, top = 1) {
-  return `<svg x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" viewBox="0 0 100 ${100 * top}" preserveAspectRatio="none" fill="${fill}" stroke="${fill}">${SHAPES[shape]}</svg>`;
-}
+// The night city from the Exposure tab: buildings and lit windows (blurred
+// as one), plus street lights drawn as blur circles.
+const CITY = `
+  <rect x="2" y="28" width="28" height="60" fill="#28344a"/><rect x="34" y="16" width="24" height="72" fill="#222c40"/>
+  <rect x="62" y="34" width="32" height="54" fill="#2b3850"/><rect x="98" y="22" width="22" height="66" fill="#232e43"/>
+  <rect x="124" y="32" width="26" height="56" fill="#28344a"/>
+  <g fill="#f2c96b"><rect x="8" y="36" width="5" height="6"/><rect x="20" y="52" width="5" height="6"/><rect x="40" y="26" width="5" height="6"/>
+    <rect x="48" y="46" width="5" height="6"/><rect x="70" y="44" width="5" height="6"/><rect x="84" y="60" width="5" height="6"/>
+    <rect x="104" y="30" width="5" height="6"/><rect x="110" y="52" width="5" height="6"/><rect x="130" y="42" width="5" height="6"/><rect x="140" y="62" width="5" height="6"/></g>`;
+const STREET_LIGHTS = [[12, 14, "#ffd27a"], [32, 18, "#ff9e7a"], [54, 20, "#9ed0ff"], [76, 21, "#ffd27a"],
+  [98, 20, "#ff9e7a"], [120, 18, "#9ed0ff"], [140, 14, "#ffd27a"]];
+
+const place = (kind, x, groundY, cmToPx) =>
+  `<g transform="translate(${x.toFixed(2)} ${groundY.toFixed(2)}) scale(${cmToPx.toFixed(5)})">${DRAW[kind].svg}</g>`;
 
 /** Subject drawn at its true size in a 150 x 100 landscape frame. */
 function reachPicture(subject, distanceM, focalMm, sensor) {
-  const sceneH = (distanceM * sensor.heightMm) / focalMm;
-  const sceneW = (distanceM * sensor.widthMm) / focalMm;
-  const h = (subject.heightM / sceneH) * 100;
-  const w = (subject.widthM / sceneW) * 150;
-  const groundY = 82;
-  return `<svg viewBox="0 0 150 100" aria-hidden="true">
-    <rect width="150" height="100" fill="#9cc7e6"/><rect y="${groundY}" width="150" height="18" fill="#5f8f52"/>
-    ${silhouette(subject.id, 75 - w / 2, groundY - h + Math.min(h, 100) * 0.04, w, h, "#2b3a55")}
-  </svg>`;
+  const sceneHcm = ((distanceM * sensor.heightMm) / focalMm) * 100;
+  const cmToPx = (100 / sceneHcm) * (subject.heightM * 100 / DRAW[subject.id].h);
+  return `<svg viewBox="0 0 150 100" aria-hidden="true">${DAY}${place(subject.id, 75, 92, cmToPx)}</svg>`;
 }
 
-/** Subject in focus over background lights blurred to their true size. */
+let blurIds = 0;
+
+/** Subject in focus in front of the night city, blurred by the true amount. */
 function blurPicture(framing, blur) {
+  const id = `cmpBlur${blurIds++}`;
   const d = Math.max(1.2, blur * 150);
-  const opacity = Math.max(0.18, Math.min(0.95, 3 / d));
-  const lights = LIGHTS.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${(d / 2).toFixed(2)}" fill="#ffd08a" opacity="${opacity.toFixed(2)}"/>`).join("");
-  const h = framing.fill * 100;
-  // People scale evenly (wider when framed tighter); the dog has its own shape.
-  const w = framing.shape === "person" ? h / framing.top : h * framing.aspect;
+  const opacity = Math.max(0.2, Math.min(0.95, 3 / d));
+  const lights = STREET_LIGHTS.map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="${(d / 2).toFixed(2)}" fill="${c}" opacity="${opacity.toFixed(2)}"/>`).join("");
+  // Scale so the framed part fills `fill` of the height; the top of the
+  // subject sits just under the top edge, the rest runs off the bottom.
+  const drawing = DRAW[framing.draw];
+  const scaleToReal = (framing.draw === "person" ? 175 : framing.subjectHeightM * 100) / drawing.h;
+  const cmToPx = ((framing.fill * 100) / (framing.subjectHeightM * 100)) * scaleToReal;
+  const topY = 100 - framing.fill * 100;
+  const groundY = topY + drawing.h * cmToPx;
   return `<svg viewBox="0 0 150 100" aria-hidden="true">
-    <rect width="150" height="100" fill="#1b2433"/>${lights}
-    ${silhouette(framing.shape, 75 - w / 2, 100 - h + (framing.top < 1 ? 0 : 4), w, h, "#0c0f14", framing.top)}
+    <defs><filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(d / 3).toFixed(2)}"/></filter></defs>
+    <rect width="150" height="100" fill="#1b2433"/>
+    <g filter="url(#${id})">${CITY}<rect y="88" width="150" height="12" fill="#2c3340"/></g>${lights}
+    ${place(framing.draw, 75, groundY, cmToPx)}
   </svg>`;
 }
 
