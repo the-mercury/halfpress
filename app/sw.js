@@ -7,7 +7,7 @@
 // The live app and the dev preview (under dev/) share one origin, so each
 // copy names its cache after its own scope and only clears its own old caches.
 
-const VERSION = "halfpress-v6";
+const VERSION = "halfpress-v7";
 const NETWORK_TIMEOUT_MS = 3000;
 const SCOPE = self.registration.scope;
 const CACHE = `${VERSION} ${SCOPE}`;
@@ -24,9 +24,9 @@ const CORE = [
   "./js/kit.js",
   "./js/optics.js",
   "./js/scenes.js",
+  "./js/subjects.js",
   "./js/views/scenes.js",
   "./js/views/lens.js",
-  "./js/views/compare.js",
   "./js/views/exposure.js",
   "./js/views/timer.js",
   "./icons/icon-192.png",
